@@ -1,0 +1,43 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pydantic-settings
+
+# Data processing
+pandas
+polars
+numpy
+openpyxl
+xlrd
+
+# Database
+sqlalchemy
+aiosqlite
+duckdb
+
+# AI / LLM
+# Using OpenRouter via httpx, no SDK required
+
+# Visualization
+matplotlib
+seaborn
+plotly
+kaleido
+
+# Statistics / ML
+scipy
+scikit-learn
+statsmodels
+
+# Reporting
+reportlab
+fpdf2
+xlsxwriter
+
+# Utilities
+python-dotenv
+aiofiles
+pillow
+httpx
+tenacity
