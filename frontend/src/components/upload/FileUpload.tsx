@@ -104,7 +104,7 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
                 transition={{ type: "spring", stiffness: 300 }}>
                 <div className="flex justify-center mb-5">
                   <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                    style={{ background: "linear-gradient(135deg, rgba(79,142,247,0.2), rgba(34,211,238,0.1))", border: "1px solid rgba(79,142,247,0.25)" }}>
+                    style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
                     <Upload className="w-8 h-8" style={{ color: "var(--accent)" }} />
                   </div>
                 </div>
@@ -137,7 +137,7 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
             <div className="flex items-start gap-4">
               {/* File icon */}
               <div className="w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0"
-                style={{ background: "rgba(79, 142, 247, 0.1)", border: "1px solid rgba(79,142,247,0.2)" }}>
+                style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
                 <FileText className="w-6 h-6" style={{ color: "var(--accent)" }} />
               </div>
 

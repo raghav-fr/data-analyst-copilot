@@ -37,7 +37,7 @@ function ColumnCard({ col }: { col: ColumnProfile }) {
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2 min-w-0">
           <span className={`text-xs font-mono font-bold w-5 h-5 flex items-center justify-center rounded ${color}`}
-            style={{ background: "rgba(255,255,255,0.05)" }}>
+            style={{ background: "var(--bg-hover)" }}>
             {icon}
           </span>
           <span className="font-medium text-sm truncate" style={{ color: "var(--text-primary)" }}>
@@ -85,7 +85,7 @@ function ColumnCard({ col }: { col: ColumnProfile }) {
 
       {/* Numeric stats */}
       {col.stats && "mean" in col.stats && (
-        <div className="grid grid-cols-3 gap-1 text-xs border-t pt-3" style={{ borderColor: "var(--border-subtle)" }}>
+        <div className="grid grid-cols-3 gap-1 text-xs border-t pt-3" style={{ borderColor: "var(--border)" }}>
           {(
             [
               ["Mean", col.stats.mean],
@@ -105,7 +105,7 @@ function ColumnCard({ col }: { col: ColumnProfile }) {
 
       {/* Categorical top values */}
       {col.stats && "top_values" in col.stats && (
-        <div className="border-t pt-3" style={{ borderColor: "var(--border-subtle)" }}>
+        <div className="border-t pt-3" style={{ borderColor: "var(--border)" }}>
           <p className="text-xs mb-2" style={{ color: "var(--text-muted)" }}>Top values</p>
           <div className="flex flex-wrap gap-1">
             {Object.entries(col.stats.top_values as Record<string, number>).slice(0, 4).map(([val, count]) => (
@@ -120,7 +120,7 @@ function ColumnCard({ col }: { col: ColumnProfile }) {
 
       {/* Sample values */}
       {(!col.stats || Object.keys(col.stats).length === 0) && col.sample_values.length > 0 && (
-        <div className="border-t pt-3" style={{ borderColor: "var(--border-subtle)" }}>
+        <div className="border-t pt-3" style={{ borderColor: "var(--border)" }}>
           <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>Sample values</p>
           <p className="text-xs truncate" style={{ color: "var(--text-secondary)" }}>
             {col.sample_values.slice(0, 3).join(", ")}

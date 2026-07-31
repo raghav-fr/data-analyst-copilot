@@ -87,17 +87,17 @@ def execute_code(
     import matplotlib.pyplot as plt
     import seaborn as sns
 
-    # Apply dark theme
-    plt.style.use("dark_background")
+    # Apply light theme
+    plt.style.use("default")
     plt.rcParams.update({
-        "figure.facecolor": "#0f172a",
-        "axes.facecolor": "#1e293b",
-        "axes.edgecolor": "#334155",
-        "axes.labelcolor": "#94a3b8",
+        "figure.facecolor": "#ffffff",
+        "axes.facecolor": "#f8fafc",
+        "axes.edgecolor": "#e2e8f0",
+        "axes.labelcolor": "#475569",
         "xtick.color": "#64748b",
         "ytick.color": "#64748b",
-        "text.color": "#e2e8f0",
-        "grid.color": "#1e293b",
+        "text.color": "#0f172a",
+        "grid.color": "#f1f5f9",
         "grid.linewidth": 0.5,
     })
 
@@ -160,35 +160,56 @@ def execute_code(
         # Check if a chart was generated
         if plt.get_fignums():
             buf = io.BytesIO()
-            plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="#0f172a")
+            plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="#ffffff")
             buf.seek(0)
             chart_base64 = base64.b64encode(buf.read()).decode("utf-8")
             plt.close("all")
 
         result = exec_globals.get("result")
 
-        # Serialize result
-        if isinstance(result, pd.DataFrame):
-            serialized = {
-                "type": "dataframe",
-                "columns": result.columns.tolist(),
-                "data": result.head(100).fillna("").to_dict("records"),
-                "shape": list(result.shape),
-            }
-        elif isinstance(result, pd.Series):
-            serialized = {
-                "type": "series",
-                "name": result.name,
-                "data": result.head(100).fillna("").to_dict(),
-            }
-        elif isinstance(result, (int, float, np.integer, np.floating)):
-            serialized = {"type": "scalar", "value": float(result)}
-        elif isinstance(result, dict):
-            serialized = {"type": "dict", "value": result}
-        elif result is None:
+        def _sanitize(obj):
+            if isinstance(obj, pd.DataFrame):
+                return {
+                    "type": "dataframe",
+                    "columns": obj.columns.tolist(),
+                    "data": obj.head(100).fillna("").to_dict("records"),
+                    "shape": list(obj.shape),
+                }
+            elif isinstance(obj, pd.Series):
+                return {
+                    "type": "series",
+                    "name": obj.name,
+                    "data": obj.head(100).fillna("").to_dict(),
+                }
+            elif isinstance(obj, dict):
+                return {str(k): _sanitize(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [_sanitize(v) for v in obj]
+            elif isinstance(obj, (np.integer, np.int64, np.int32)):
+                return int(obj)
+            elif isinstance(obj, (np.floating, np.float64, np.float32)):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return _sanitize(obj.tolist())
+            elif isinstance(obj, (int, float, str, bool, type(None))):
+                return obj
+            else:
+                return str(obj)
+
+        if result is None:
             serialized = None
         else:
-            serialized = {"type": "text", "value": str(result)}
+            serialized = _sanitize(result)
+            # Wrap standard types to match the expected format for the frontend
+            if not isinstance(serialized, dict) or "type" not in serialized:
+                if isinstance(serialized, dict):
+                    serialized = {"type": "dict", "value": serialized}
+                elif isinstance(serialized, list):
+                    serialized = {"type": "list", "value": serialized}
+                elif isinstance(serialized, (int, float)):
+                    serialized = {"type": "scalar", "value": serialized}
+                else:
+                    serialized = {"type": "text", "value": str(serialized)}
 
         elapsed_ms = int((time.time() - start_time) * 1000)
 

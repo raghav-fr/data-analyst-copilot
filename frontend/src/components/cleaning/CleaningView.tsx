@@ -80,7 +80,7 @@ export default function CleaningView() {
       <div className="flex-1 overflow-auto p-4 space-y-5">
         {/* AI Suggestions */}
         {suggestions && suggestions.suggestions && suggestions.suggestions.length > 0 && (
-          <div className="glass-card p-4 rounded-xl border" style={{ borderColor: "rgba(79,142,247,0.2)" }}>
+          <div className="glass-card p-4 rounded-xl border" style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center gap-2 mb-3">
               <span>🤖</span>
               <span className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>AI Recommendations</span>
@@ -94,7 +94,7 @@ export default function CleaningView() {
                     if (op) { setSelectedOp(op); setParams(s.params); }
                   }}
                   className="w-full text-left p-3 rounded-lg border text-sm transition-all"
-                  style={{ background: "rgba(79,142,247,0.04)", borderColor: "rgba(79,142,247,0.15)", color: "var(--text-secondary)" }}>
+                  style={{ background: "var(--bg-hover)", borderColor: "var(--border)", color: "var(--text-secondary)" }}>
                   <span className="font-medium" style={{ color: "var(--accent)" }}>{s.operation}: </span>
                   {s.description}
                 </button>
@@ -113,8 +113,8 @@ export default function CleaningView() {
                 onClick={() => setSelectedOp(op)}
                 className="text-left p-3 rounded-xl border transition-all text-sm"
                 style={{
-                  background: selectedOp.id === op.id ? "rgba(79,142,247,0.1)" : "rgba(255,255,255,0.02)",
-                  borderColor: selectedOp.id === op.id ? "rgba(79,142,247,0.3)" : "var(--border-subtle)",
+                  background: selectedOp.id === op.id ? "var(--bg-hover)" : "var(--bg-card)",
+                  borderColor: selectedOp.id === op.id ? "var(--accent)" : "var(--border)",
                   color: selectedOp.id === op.id ? "var(--accent)" : "var(--text-secondary)"
                 }}>
                 <div className="text-lg mb-1">{op.icon}</div>
@@ -172,7 +172,7 @@ export default function CleaningView() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="p-4 rounded-xl border"
-            style={{ background: "rgba(16,185,129,0.05)", borderColor: "rgba(16,185,129,0.2)" }}>
+            style={{ background: "var(--bg-secondary)", borderColor: "var(--success)" }}>
             <div className="flex items-center gap-2 mb-1">
               <CheckCircle2 className="w-4 h-4" style={{ color: "var(--success)" }} />
               <span className="font-medium text-sm" style={{ color: "var(--success)" }}>Operation Complete</span>
@@ -185,8 +185,8 @@ export default function CleaningView() {
           <div className="space-y-2">
             <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>Recent Operations</p>
             {history.map((entry, i) => (
-              <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg"
-                style={{ background: "rgba(255,255,255,0.02)", color: "var(--text-secondary)" }}>
+              <div key={i} className="flex items-center gap-2 text-xs px-3 py-2 rounded-lg border"
+                style={{ background: "var(--bg-card)", color: "var(--text-secondary)", borderColor: "var(--border)" }}>
                 <CheckCircle2 className="w-3 h-3" style={{ color: "var(--success)" }} />
                 {entry}
               </div>

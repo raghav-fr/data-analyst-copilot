@@ -51,7 +51,7 @@ export default function SQLView() {
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
-        style={{ borderColor: "var(--border-subtle)" }}>
+        style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4" style={{ color: "var(--accent)" }} />
           <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>SQL Agent</span>
@@ -96,7 +96,7 @@ export default function SQLView() {
             </div>
             {nlMutation.data?.explanation && (
               <div className="glass-card p-3 rounded-xl border text-sm"
-                style={{ borderColor: "rgba(34,211,238,0.2)", color: "var(--text-secondary)" }}>
+                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}>
                 💡 {nlMutation.data.explanation}
               </div>
             )}
@@ -142,7 +142,7 @@ export default function SQLView() {
         {/* Error */}
         {sqlMutation.isError && (
           <div className="flex items-start gap-3 p-4 rounded-xl border"
-            style={{ background: "rgba(244,63,94,0.05)", borderColor: "rgba(244,63,94,0.2)" }}>
+            style={{ background: "var(--bg-secondary)", borderColor: "var(--danger)" }}>
             <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: "var(--danger)" }} />
             <div>
               <p className="font-medium text-sm mb-1" style={{ color: "var(--danger)" }}>Query Error</p>
@@ -174,7 +174,7 @@ export default function SQLView() {
 
             {/* Table */}
             <div className="glass-card rounded-xl overflow-hidden border"
-              style={{ borderColor: "var(--border-subtle)" }}>
+              style={{ borderColor: "var(--border)" }}>
               <DataTable columns={result.columns} data={result.data} maxRows={200} />
             </div>
           </motion.div>

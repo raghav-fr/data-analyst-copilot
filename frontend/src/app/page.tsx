@@ -124,8 +124,8 @@ export default function LandingPage() {
           transition={{ duration: 0.6 }}>
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border mb-6"
             style={{
-              background: "rgba(79, 142, 247, 0.1)",
-              borderColor: "rgba(79, 142, 247, 0.25)",
+              background: "var(--bg-hover)",
+              borderColor: "var(--border)",
               color: "var(--accent)"
             }}>
             <Sparkles className="w-3.5 h-3.5" />
@@ -186,15 +186,15 @@ export default function LandingPage() {
         transition={{ delay: 0.4, duration: 0.7 }}
         className="relative z-10 max-w-6xl mx-auto px-6 mb-24">
         <div className="glass-card p-1 rounded-2xl"
-          style={{ boxShadow: "0 0 60px rgba(79, 142, 247, 0.12), 0 0 120px rgba(34, 211, 238, 0.06)" }}>
+          style={{ boxShadow: "0 4px 60px rgba(15, 23, 42, 0.08)" }}>
           {/* Mock browser chrome */}
           <div className="flex items-center gap-2 px-4 py-3 rounded-t-xl border-b"
-            style={{ background: "rgba(10, 22, 40, 0.8)", borderColor: "var(--border-subtle)" }}>
+            style={{ background: "var(--bg-secondary)", borderColor: "var(--border)" }}>
             <div className="w-3 h-3 rounded-full" style={{ background: "#f43f5e" }} />
             <div className="w-3 h-3 rounded-full" style={{ background: "#f59e0b" }} />
             <div className="w-3 h-3 rounded-full" style={{ background: "#10b981" }} />
             <div className="flex-1 mx-4 px-4 py-1 rounded-md text-xs text-center"
-              style={{ background: "rgba(5, 11, 26, 0.6)", color: "var(--text-muted)", border: "1px solid var(--border-subtle)" }}>
+              style={{ background: "var(--bg-panel)", color: "var(--text-muted)", border: "1px solid var(--border)" }}>
               localhost:3000/dashboard
             </div>
           </div>
@@ -204,11 +204,11 @@ export default function LandingPage() {
             <div className="grid grid-cols-12 h-[380px]">
               {/* Sidebar mock */}
               <div className="col-span-2 border-r p-3 flex flex-col gap-2"
-                style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)" }}>
+                style={{ borderColor: "var(--border)", background: "var(--bg-secondary)" }}>
                 {["Chat", "EDA", "Statistics", "SQL", "Cleaning", "Export"].map((item, i) => (
                   <div key={item} className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
                     style={{
-                      background: i === 0 ? "rgba(79,142,247,0.15)" : "transparent",
+                      background: i === 0 ? "var(--bg-hover)" : "transparent",
                       color: i === 0 ? "var(--accent)" : "var(--text-secondary)"
                     }}>
                     <div className="w-3 h-3 rounded" style={{ background: i === 0 ? "var(--accent)" : "var(--border)" }} />
@@ -225,14 +225,14 @@ export default function LandingPage() {
                     </div>
                 ))}
                 <div className="glass-card p-3 rounded-lg border"
-                  style={{ borderColor: "rgba(34,211,238,0.2)", background: "rgba(34,211,238,0.04)" }}>
+                  style={{ borderColor: "var(--border)", background: "var(--bg-panel)" }}>
                   <p className="text-xs font-mono" style={{ color: "var(--accent2)" }}>
                     df.groupby('State')['Revenue'].sum().sort_values(ascending=False).head()
                   </p>
                 </div>
               </div>
               {/* Chart mock */}
-              <div className="col-span-4 border-l p-4" style={{ borderColor: "var(--border-subtle)" }}>
+              <div className="col-span-4 border-l p-4" style={{ borderColor: "var(--border)" }}>
                 <p className="text-xs font-medium mb-3" style={{ color: "var(--text-secondary)" }}>Revenue by State</p>
                 {["California", "Texas", "New York", "Florida", "Illinois"].map((state, i) => (
                   <div key={state} className="flex items-center gap-2 mb-2">
@@ -304,8 +304,8 @@ export default function LandingPage() {
               <div key={tech.name}
                 className="flex items-center gap-2 px-4 py-2 rounded-full border text-sm"
                 style={{
-                  background: "rgba(79, 142, 247, 0.06)",
-                  borderColor: "rgba(79, 142, 247, 0.2)",
+                  background: "var(--bg-hover)",
+                  borderColor: "var(--border)",
                   color: "var(--text-primary)"
                 }}>
                 <span>{tech.icon}</span>
@@ -323,7 +323,7 @@ export default function LandingPage() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.6 }}>
           <div className="glass-card p-12"
-            style={{ boxShadow: "0 0 40px rgba(79, 142, 247, 0.1)" }}>
+            style={{ boxShadow: "0 4px 40px rgba(15, 23, 42, 0.06)" }}>
             <Shield className="w-10 h-10 mx-auto mb-4" style={{ color: "var(--accent)" }} />
             <h2 className="text-3xl font-bold mb-4" style={{ color: "var(--text-primary)" }}>
               Ready to Analyze Smarter?

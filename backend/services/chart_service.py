@@ -18,20 +18,20 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
 
-# Dark theme palette
-DARK_BG = "#0f172a"
-PANEL_BG = "#1e293b"
-BORDER = "#334155"
-TEXT_COLOR = "#e2e8f0"
-MUTED_TEXT = "#94a3b8"
-ACCENT = "#6366f1"
+# Light theme palette
+BG_COLOR = "#ffffff"
+PANEL_BG = "#f8fafc"
+BORDER = "#e2e8f0"
+TEXT_COLOR = "#0f172a"
+MUTED_TEXT = "#475569"
+ACCENT = "#4f8ef7"
 ACCENT2 = "#22d3ee"
-COLORS = ["#6366f1", "#22d3ee", "#f59e0b", "#10b981", "#f43f5e", "#a78bfa", "#fb923c", "#34d399"]
+COLORS = ["#4f8ef7", "#22d3ee", "#f59e0b", "#10b981", "#f43f5e", "#a78bfa", "#fb923c", "#34d399"]
 
 
 def _apply_theme(fig, ax=None):
-    """Apply consistent dark theme to figure."""
-    fig.patch.set_facecolor(DARK_BG)
+    """Apply consistent light theme to figure."""
+    fig.patch.set_facecolor(BG_COLOR)
     if ax:
         axes = [ax] if not isinstance(ax, (list, np.ndarray)) else ax.flatten()
         for a in axes:
@@ -50,7 +50,7 @@ def _apply_theme(fig, ax=None):
 def _fig_to_base64(fig) -> str:
     """Convert matplotlib figure to base64 string."""
     buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=DARK_BG)
+    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=BG_COLOR)
     buf.seek(0)
     result = base64.b64encode(buf.read()).decode("utf-8")
     plt.close(fig)
@@ -227,7 +227,7 @@ def generate_pairplot(df: pd.DataFrame, columns: Optional[list] = None) -> str:
 
     n = len(numeric_df.columns)
     fig, axes = plt.subplots(n, n, figsize=(n * 2.5, n * 2.5))
-    fig.patch.set_facecolor(DARK_BG)
+    fig.patch.set_facecolor(BG_COLOR)
 
     for i, col_i in enumerate(numeric_df.columns):
         for j, col_j in enumerate(numeric_df.columns):

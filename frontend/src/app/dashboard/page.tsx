@@ -48,14 +48,12 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
 
   return (
     <motion.aside
-      animate={{ width: sidebarCollapsed ? 56 : 240 }}
+      animate={{ width: sidebarCollapsed ? 72 : 240 }}
       transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="flex-shrink-0 flex flex-col border-r overflow-hidden shadow-2xl z-40"
+      className="flex-shrink-0 flex flex-col border-r overflow-visible shadow-lg z-40 relative"
       style={{
-        background: "rgba(10, 20, 35, 0.6)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        borderColor: "rgba(255, 255, 255, 0.05)",
+        background: "var(--bg-secondary)",
+        borderColor: "var(--border)",
         height: "100vh",
       }}>
       {/* Logo */}
@@ -64,7 +62,8 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
         {sidebarCollapsed ? (
           <button
             onClick={() => setSidebarCollapsed(false)}
-            className="btn-ghost p-1 mx-auto flex-shrink-0 flex items-center justify-center w-8 h-8">
+            className="btn-ghost p-1 mx-auto flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full"
+            style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
             <ChevronRight className="w-4 h-4 flex-shrink-0" />
           </button>
         ) : (
@@ -103,10 +102,10 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
             <FileUpload onUploadSuccess={() => { refetch(); }} />
           </div>
         ) : (
-          <button className="w-full flex items-center justify-center p-2 rounded-lg border transition-all"
-            style={{ borderColor: "var(--border-subtle)", color: "var(--text-secondary)" }}
+          <button className="flex items-center justify-center w-12 h-12 mx-auto rounded-xl border transition-all"
+            style={{ borderColor: "var(--border)", background: "var(--bg-card)", color: "var(--text-secondary)" }}
             title="Upload dataset">
-            <Upload className="w-4 h-4 flex-shrink-0" />
+            <Upload className="w-5 h-5 flex-shrink-0" />
           </button>
         )}
       </div>
@@ -118,8 +117,8 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
           animate={{ opacity: 1, y: 0 }}
           className="mx-3 my-3 p-3 rounded-xl border"
           style={{
-            background: "rgba(79,142,247,0.06)",
-            borderColor: "rgba(79,142,247,0.2)"
+            background: "var(--bg-hover)",
+            borderColor: "var(--border)"
           }}>
           <div className="flex items-start justify-between gap-1">
             <div className="min-w-0">
@@ -148,7 +147,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
       {!sidebarCollapsed && (
         <div className="px-3 pb-2">
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
-            style={{ background: "rgba(167,139,250,0.08)", border: "1px solid rgba(167,139,250,0.15)" }}>
+            style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
             <Cpu className="w-3 h-3" style={{ color: "var(--purple)" }} />
             <span className="text-xs" style={{ color: "var(--text-secondary)" }}>
               OpenRouter (Nemotron)
@@ -159,16 +158,18 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
       )}
 
       {/* Settings & Home */}
-      <div className={`p-3 border-t flex gap-2 ${sidebarCollapsed ? "flex-col" : "flex-row"}`} style={{ borderColor: "var(--border-subtle)" }}>
+      <div className={`p-3 border-t flex gap-2 ${sidebarCollapsed ? "flex-col items-center" : "flex-row"}`} style={{ borderColor: "var(--border)" }}>
         <button
           onClick={() => router.push("/")}
-          className="btn-ghost p-2 flex items-center justify-center"
+          className={`btn-ghost p-2 flex items-center justify-center ${sidebarCollapsed ? "w-12 h-12 rounded-xl" : ""}`}
+          style={sidebarCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
           title="Home">
           <Home className="w-4 h-4 flex-shrink-0" />
         </button>
         <button
           onClick={() => setSettingsOpen(true)}
-          className="btn-ghost p-2 flex items-center justify-center flex-1"
+          className={`btn-ghost p-2 flex items-center justify-center ${sidebarCollapsed ? "w-12 h-12 rounded-xl" : "flex-1"}`}
+          style={sidebarCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
           title="Settings">
           <Settings className="w-4 h-4 flex-shrink-0" />
           {!sidebarCollapsed && <span className="ml-2 text-xs">Settings</span>}
@@ -216,9 +217,9 @@ export default function DashboardPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0"
                   style={{
-                    background: isActive ? "rgba(79,142,247,0.15)" : "transparent",
+                    background: isActive ? "var(--bg-hover)" : "transparent",
                     color: isActive ? "var(--accent)" : "var(--text-secondary)",
-                    border: isActive ? "1px solid rgba(79,142,247,0.25)" : "1px solid transparent",
+                    border: isActive ? "1px solid var(--border)" : "1px solid transparent",
                   }}>
                   <Icon className="w-3.5 h-3.5" />
                   <span>{tab.label}</span>
@@ -231,8 +232,8 @@ export default function DashboardPage() {
           {activeDataset && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border flex-shrink-0 text-xs"
               style={{
-                background: "rgba(34,211,238,0.06)",
-                borderColor: "rgba(34,211,238,0.2)",
+                background: "var(--bg-panel)",
+                borderColor: "var(--border)",
                 color: "var(--accent2)"
               }}>
               <Sparkles className="w-3 h-3" />
@@ -259,7 +260,7 @@ export default function DashboardPage() {
           {!activeDataset && currentTab !== "chat" && (
             <div className="flex flex-col items-center justify-center h-full gap-4">
               <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-                style={{ background: "rgba(79,142,247,0.1)", border: "1px solid rgba(79,142,247,0.2)" }}>
+                style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
                 <Upload className="w-8 h-8" style={{ color: "var(--accent)" }} />
               </div>
               <div className="text-center">

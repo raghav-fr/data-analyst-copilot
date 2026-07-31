@@ -39,18 +39,18 @@ export default function SettingsModal() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
-        style={{ background: "rgba(5, 11, 26, 0.85)" }}
+        style={{ background: "rgba(0, 0, 0, 0.2)", backdropFilter: "blur(4px)" }}
         onClick={() => setSettingsOpen(false)}>
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95 }}
           className="glass-card rounded-2xl w-full max-w-lg overflow-hidden"
-          style={{ border: "1px solid rgba(79,142,247,0.2)" }}
+          style={{ border: "1px solid var(--border)" }}
           onClick={(e) => e.stopPropagation()}>
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b"
-            style={{ borderColor: "var(--border-subtle)" }}>
+            style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5" style={{ color: "var(--accent)" }} />
               <span className="font-semibold" style={{ color: "var(--text-primary)" }}>Settings</span>
@@ -122,7 +122,7 @@ export default function SettingsModal() {
 
             {/* Note about backend config */}
             <div className="p-4 rounded-xl border text-xs"
-              style={{ background: "rgba(245,158,11,0.05)", borderColor: "rgba(245,158,11,0.2)", color: "var(--text-secondary)" }}>
+              style={{ background: "var(--bg-secondary)", borderColor: "var(--warning)", color: "var(--text-secondary)" }}>
               <strong style={{ color: "var(--warning)" }}>⚠️ Important:</strong>{" "}
               Your API key must also be set in <code className="text-xs">backend/.env</code> as{" "}
               <code className="text-xs" style={{ color: "var(--accent2)" }}>OPENROUTER_API_KEY=...</code>{" "}

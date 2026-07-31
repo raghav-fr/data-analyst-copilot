@@ -136,7 +136,7 @@ export default function ChatInterface() {
         style={{ borderColor: "var(--border-subtle)" }}>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, rgba(79,142,247,0.2), rgba(34,211,238,0.1))", border: "1px solid rgba(79,142,247,0.2)" }}>
+            style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
             <Sparkles className="w-3.5 h-3.5" style={{ color: "var(--accent)" }} />
           </div>
           <div>
@@ -154,7 +154,7 @@ export default function ChatInterface() {
             {/* Welcome */}
             <div className="text-center mb-6 pt-4">
               <div className="w-12 h-12 rounded-xl mx-auto mb-3 flex items-center justify-center"
-                style={{ background: "linear-gradient(135deg, rgba(79,142,247,0.2), rgba(167,139,250,0.1))", border: "1px solid rgba(79,142,247,0.2)" }}>
+                style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
                 <Bot className="w-6 h-6" style={{ color: "var(--accent)" }} />
               </div>
               <p className="font-medium mb-1" style={{ color: "var(--text-primary)" }}>
@@ -181,8 +181,8 @@ export default function ChatInterface() {
                       onClick={() => sendMessage(q.question)}
                       className="text-left px-3 py-2.5 rounded-lg border transition-all text-sm hover:border-blue-500/30"
                       style={{
-                        background: "rgba(79,142,247,0.04)",
-                        borderColor: "var(--border-subtle)",
+                        background: "var(--bg-hover)",
+                        borderColor: "var(--border)",
                         color: "var(--text-secondary)"
                       }}>
                       <span className="mr-2">{q.icon}</span>
@@ -206,10 +206,8 @@ export default function ChatInterface() {
               {/* Avatar */}
               <div className={`w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center`}
                 style={{
-                  background: msg.role === "user"
-                    ? "linear-gradient(135deg, rgba(79,142,247,0.3), rgba(79,142,247,0.1))"
-                    : "linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.05))",
-                  border: `1px solid ${msg.role === "user" ? "rgba(79,142,247,0.3)" : "rgba(167,139,250,0.2)"}`,
+                  background: msg.role === "user" ? "var(--bg-hover)" : "var(--bg-card)",
+                  border: "1px solid var(--border)",
                   marginTop: "2px"
                 }}>
                 {msg.role === "user"
@@ -235,7 +233,7 @@ export default function ChatInterface() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="glass-card p-3 rounded-xl border w-full"
-                    style={{ borderColor: "rgba(34,211,238,0.2)" }}>
+                    style={{ borderColor: "var(--border)" }}>
                     <img
                       src={msg.chart_url}
                       alt="Generated chart"
@@ -263,7 +261,7 @@ export default function ChatInterface() {
                 {/* Scalar result */}
                 {msg.table_data && msg.table_data.type === "scalar" && (
                   <div className="px-4 py-3 rounded-xl border"
-                    style={{ background: "rgba(34,211,238,0.05)", borderColor: "rgba(34,211,238,0.2)" }}>
+                    style={{ background: "var(--bg-hover)", borderColor: "var(--border)" }}>
                     <p className="text-2xl font-bold" style={{ color: "var(--accent2)" }}>
                       {typeof msg.table_data.value === "number"
                         ? msg.table_data.value.toLocaleString(undefined, { maximumFractionDigits: 4 })
@@ -296,7 +294,7 @@ export default function ChatInterface() {
                           <button
                             onClick={() => copyCode(msg.code!, msg.id)}
                             className="absolute top-2 right-2 p-1.5 rounded-md transition-colors"
-                            style={{ background: "rgba(255,255,255,0.05)" }}>
+                            style={{ background: "var(--bg-panel)" }}>
                             {copied === msg.id
                               ? <Check className="w-3.5 h-3.5 text-green-400" />
                               : <Copy className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />}
@@ -330,7 +328,7 @@ export default function ChatInterface() {
             animate={{ opacity: 1, y: 0 }}
             className="flex items-start gap-3">
             <div className="w-7 h-7 rounded-lg flex-shrink-0 flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, rgba(167,139,250,0.2), rgba(167,139,250,0.05))", border: "1px solid rgba(167,139,250,0.2)" }}>
+              style={{ background: "var(--bg-card)", border: "1px solid var(--border)" }}>
               <Bot className="w-3.5 h-3.5" style={{ color: "var(--purple)" }} />
             </div>
             <div className="chat-assistant">
@@ -346,7 +344,7 @@ export default function ChatInterface() {
       {/* Input area */}
       <div className="flex-shrink-0 px-4 pb-4 pt-2 border-t" style={{ borderColor: "var(--border-subtle)" }}>
         <div className="flex items-end gap-2 rounded-xl border p-2 transition-all focus-within:border-blue-500/40"
-          style={{ background: "rgba(10, 22, 40, 0.7)", borderColor: "var(--border)" }}>
+          style={{ background: "var(--bg-card)", borderColor: "var(--border)" }}>
           <textarea
             ref={inputRef}
             value={input}
@@ -366,9 +364,9 @@ export default function ChatInterface() {
             className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0 transition-all disabled:opacity-40"
             style={{
               background: input.trim()
-                ? "linear-gradient(135deg, #4f8ef7, #3b73d4)"
-                : "rgba(79, 142, 247, 0.1)",
-              border: "1px solid rgba(79, 142, 247, 0.3)",
+                ? "var(--accent)"
+                : "var(--bg-hover)",
+              border: "1px solid var(--border)",
             }}>
             <Send className="w-4 h-4 text-white" />
           </motion.button>

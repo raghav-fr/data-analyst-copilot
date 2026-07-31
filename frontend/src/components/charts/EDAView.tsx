@@ -43,10 +43,10 @@ function ChartCard({ chart, index }: ChartCardProps) {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.06, duration: 0.4 }}
         className="glass-card rounded-xl overflow-hidden border"
-        style={{ borderColor: "var(--border-subtle)" }}>
+        style={{ borderColor: "var(--border)" }}>
         {/* Card header */}
         <div className="flex items-center justify-between px-4 py-3 border-b"
-          style={{ borderColor: "var(--border-subtle)", background: "rgba(10,22,40,0.5)" }}>
+          style={{ borderColor: "var(--border)", background: "var(--bg-secondary)" }}>
           <div className="flex items-center gap-2 min-w-0">
             <span className={`badge ${typeColors[chart.chart_type] || "badge-blue"} text-xs flex-shrink-0`}>
               {chart.chart_type.replace("_", " ")}
@@ -76,7 +76,7 @@ function ChartCard({ chart, index }: ChartCardProps) {
 
         {/* Insight toggle */}
         {chart.insight && (
-          <div className="border-t" style={{ borderColor: "var(--border-subtle)" }}>
+          <div className="border-t" style={{ borderColor: "var(--border)" }}>
             <button
               onClick={() => setShowInsight(!showInsight)}
               className="flex items-center gap-2 w-full px-4 py-2.5 text-sm transition-colors"
@@ -94,7 +94,7 @@ function ChartCard({ chart, index }: ChartCardProps) {
                   className="overflow-hidden">
                   <div className="px-4 pb-4">
                     <div className="prose-dark text-xs rounded-lg p-3"
-                      style={{ background: "rgba(79,142,247,0.05)", border: "1px solid rgba(79,142,247,0.12)" }}>
+                      style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>{chart.insight}</ReactMarkdown>
                     </div>
                   </div>
@@ -113,7 +113,7 @@ function ChartCard({ chart, index }: ChartCardProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            style={{ background: "rgba(5,11,26,0.92)" }}
+            style={{ background: "var(--bg-secondary)" }}
             onClick={() => setFullscreen(false)}>
             <motion.div
               initial={{ scale: 0.92 }}
@@ -122,7 +122,7 @@ function ChartCard({ chart, index }: ChartCardProps) {
               className="glass-card rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-auto"
               onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between px-5 py-3 border-b"
-                style={{ borderColor: "var(--border-subtle)" }}>
+                style={{ borderColor: "var(--border)" }}>
                 <h3 className="font-semibold" style={{ color: "var(--text-primary)" }}>{chart.title}</h3>
                 <button onClick={() => setFullscreen(false)} className="btn-ghost p-1">✕</button>
               </div>
@@ -130,7 +130,7 @@ function ChartCard({ chart, index }: ChartCardProps) {
                 <img src={chart.image_url} alt={chart.title} className="w-full rounded-xl" />
                 {chart.insight && (
                   <div className="mt-5 prose-dark"
-                    style={{ background: "rgba(79,142,247,0.05)", border: "1px solid rgba(79,142,247,0.12)", borderRadius: "10px", padding: "14px" }}>
+                    style={{ background: "var(--bg-hover)", border: "1px solid var(--border)", borderRadius: "10px", padding: "14px" }}>
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>{chart.insight}</ReactMarkdown>
                   </div>
                 )}
@@ -169,7 +169,7 @@ export default function EDAView() {
     <div className="h-full overflow-auto">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b sticky top-0 z-10"
-        style={{ borderColor: "var(--border-subtle)", background: "var(--bg-primary)" }}>
+        style={{ borderColor: "var(--border)", background: "var(--bg-primary)" }}>
         <div className="flex items-center gap-2">
           <BarChart3 className="w-4 h-4" style={{ color: "var(--accent)" }} />
           <h3 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
@@ -219,7 +219,7 @@ export default function EDAView() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               className="glass-card p-5 rounded-xl border"
-              style={{ borderColor: "rgba(79,142,247,0.2)" }}>
+              style={{ borderColor: "var(--border)" }}>
               <div className="flex items-center gap-2 mb-3">
                 <Lightbulb className="w-4 h-4" style={{ color: "var(--accent)" }} />
                 <h4 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
@@ -240,9 +240,9 @@ export default function EDAView() {
                 onClick={() => setFilter(f)}
                 className={`badge text-xs cursor-pointer transition-all ${filter === f ? "badge-blue" : ""}`}
                 style={filter !== f ? {
-                  background: "rgba(255,255,255,0.04)",
+                  background: "var(--bg-card)",
                   color: "var(--text-secondary)",
-                  borderColor: "var(--border-subtle)"
+                  borderColor: "var(--border)"
                 } : {}}>
                 {f === "all" ? `All (${edaData.charts.length})` : f.replace("_", " ")}
               </button>
