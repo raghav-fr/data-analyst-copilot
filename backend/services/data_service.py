@@ -26,7 +26,20 @@ def load_dataset(file_path: str, original_filename: str) -> tuple[str, pd.DataFr
     elif ext in (".xlsx", ".xls"):
         df = pd.read_excel(file_path)
     elif ext == ".json":
-        df = pd.read_json(file_path)
+        try:
+            df = pd.read_json(file_path)
+        except Exception:
+            import json
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                if isinstance(data, dict) and len(data) == 1:
+                    first_key = list(data.keys())[0]
+                    if isinstance(data[first_key], list):
+                        data = data[first_key]
+                df = pd.DataFrame(data)
+            except json.JSONDecodeError:
+                df = pd.read_json(file_path, lines=True)
     elif ext == ".parquet":
         df = pd.read_parquet(file_path)
     else:
