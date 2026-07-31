@@ -92,7 +92,10 @@ Results:
 Statistical context:
 {stats_context}
 
-Provide:
+INSTRUCTIONS:
+If the analysis type is 'general' and the user is just greeting or asking a conversational question (e.g. "hi", "hello", "how are you"), do NOT provide a dataset summary. Instead, simply reply politely and concisely, introducing yourself as their Data Analyst Copilot and asking how you can help them analyze their {dataset_name} dataset.
+
+For all other data-related questions, provide:
 1. A clear summary of what the data shows (2-3 sentences)
 2. Key insights and patterns (3-4 bullet points)
 3. Business implications or recommendations (1-2 sentences)

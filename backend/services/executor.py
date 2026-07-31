@@ -27,7 +27,7 @@ SAFE_BUILTINS = {
     "print": print, "range": range, "repr": repr, "reversed": reversed,
     "round": round, "set": set, "slice": slice, "sorted": sorted, "str": str,
     "sum": sum, "tuple": tuple, "type": type, "vars": vars, "zip": zip,
-    "True": True, "False": False, "None": None,
+    "True": True, "False": False, "None": None, "__import__": __import__,
 }
 
 # Blocked patterns in code
