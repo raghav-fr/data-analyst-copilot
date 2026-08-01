@@ -57,6 +57,16 @@ def load_dataset(file_path: str, original_filename: str) -> tuple[str, pd.DataFr
     return dataset_id, df
 
 
+def register_dataset_meta(dataset_id: str, filename: str, file_path: str, rows: int, columns: int):
+    """Register dataset metadata so it can be lazy-loaded later without DB access."""
+    _dataset_meta[dataset_id] = {
+        "filename": filename,
+        "file_path": file_path,
+        "rows": rows,
+        "columns": columns,
+    }
+
+
 def get_dataframe(dataset_id: str) -> Optional[pd.DataFrame]:
     """Get a DataFrame by dataset_id. Tries disk reload if not in memory."""
     if dataset_id in _dataframe_store:

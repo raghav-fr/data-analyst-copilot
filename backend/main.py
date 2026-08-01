@@ -36,6 +36,22 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 Starting Data Analyst Copilot API...")
     await init_db()
     logger.info("✅ Database initialized")
+    
+    # Pre-load metadata for all datasets from the DB so data_service can lazy-load dataframes
+    from database.db import AsyncSessionLocal
+    from sqlalchemy import select
+    from models.db_models import Dataset
+    from services.data_service import register_dataset_meta
+    
+    try:
+        async with AsyncSessionLocal() as session:
+            result = await session.execute(select(Dataset))
+            for d in result.scalars().all():
+                register_dataset_meta(d.id, d.original_filename, d.file_path, d.rows, d.columns)
+        logger.info("✅ Dataset metadata registered")
+    except Exception as e:
+        logger.warning(f"Could not register dataset metadata: {e}")
+
     yield
     logger.info("🛑 Shutting down...")
 

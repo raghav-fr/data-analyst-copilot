@@ -65,7 +65,7 @@ User question: {question}
 
 Rules:
 1. Use ONLY: pandas (pd), numpy (np), matplotlib.pyplot (plt), seaborn (sns)
-2. The result should be stored in a variable called 'result'
+2. You MUST store the final answer/data in a variable called 'result'. If you are calculating a number, do `result = df.duplicated().sum()`.
 3. If creating a chart, do NOT use plt.show() or plt.savefig() or plt.close(). The system will automatically capture the active matplotlib figure.
 4. Keep code clean and add inline comments
 5. For tables/data, result should be a pandas DataFrame or Series

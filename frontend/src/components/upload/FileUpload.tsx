@@ -223,52 +223,6 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
         )}
       </AnimatePresence>
 
-      {/* Saved Datasets Section */}
-      {datasets && datasets.length > 0 && (
-        <div className="mt-8 border-t pt-4" style={{ borderColor: "var(--border-subtle)" }}>
-          <h4 className="text-sm font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Saved Datasets</h4>
-          <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
-            {datasets.map((ds) => (
-              <div 
-                key={ds.id} 
-                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${activeDataset?.id === ds.id ? "bg-[var(--bg-hover)] border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--border-hover)]"}`}
-              >
-                <div 
-                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
-                  onClick={() => {
-                    setActiveConversationId(null);
-                    setActiveDataset({
-                      id: ds.id,
-                      filename: ds.filename,
-                      rows: ds.rows,
-                      columns: ds.columns,
-                      column_names: [],
-                    });
-                  }}
-                >
-                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: "var(--accent)" }} />
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
-                      {ds.filename}
-                    </p>
-                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      {formatBytes(ds.file_size)} • {ds.rows.toLocaleString()} rows
-                    </p>
-                  </div>
-                </div>
-                <button 
-                  onClick={() => deleteMutation.mutate(ds.id)}
-                  disabled={deleteMutation.isPending}
-                  className="btn-ghost p-2 flex-shrink-0 hover:bg-red-500/10 hover:text-red-500"
-                  title="Delete dataset"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

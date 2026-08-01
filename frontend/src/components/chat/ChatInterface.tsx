@@ -34,9 +34,57 @@ export default function ChatInterface() {
   const [input, setInput] = useState("");
   const [showCode, setShowCode] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { activeDataset, activeConversationId, setActiveConversationId, selectedModel } = useAppStore();
+
+  // Load conversation for active dataset
+  useEffect(() => {
+    if (activeDataset?.id) {
+      api.getConversations(activeDataset.id).then((convs: any[]) => {
+        if (convs && convs.length > 0) {
+          setActiveConversationId(convs[0].id);
+        } else {
+          setActiveConversationId(null);
+          setMessages([]);
+        }
+      }).catch(err => {
+        console.error("Failed to load conversations", err);
+        setActiveConversationId(null);
+        setMessages([]);
+      });
+    } else {
+      setMessages([]);
+    }
+  }, [activeDataset?.id, setActiveConversationId]);
+
+  // Load chat history for active conversation
+  useEffect(() => {
+    if (activeConversationId) {
+      setIsLoadingHistory(true);
+      api.getChatHistory(activeConversationId).then((history: any[]) => {
+        const formattedHistory: Message[] = history.map((msg: any) => ({
+          id: msg.id,
+          role: msg.role as "user" | "assistant",
+          content: msg.content,
+          code: msg.code || undefined,
+          chart_url: msg.chart_path || undefined,
+          table_data: msg.result_data?.table || undefined,
+          intent: msg.result_data?.intent || undefined,
+          timestamp: new Date(msg.created_at),
+        }));
+        setMessages(formattedHistory);
+      }).catch(err => {
+        console.error("Failed to load chat history", err);
+        toast.error("Failed to load chat history");
+      }).finally(() => {
+        setIsLoadingHistory(false);
+      });
+    } else if (activeDataset) {
+      setMessages([]);
+    }
+  }, [activeConversationId, activeDataset]);
 
   // Load suggestions
   const { data: suggestionsData } = useQuery({

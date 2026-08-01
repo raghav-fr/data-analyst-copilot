@@ -8,7 +8,7 @@ import {
   FileText, Cpu, Hash, Tag, TrendingUp, AlertCircle,
   Sparkles, Home, RefreshCw, Trash2
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
@@ -40,10 +40,26 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
 }) {
   const { activeDataset, setActiveDataset, setActiveConversationId, setSettingsOpen } = useAppStore();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const { data: datasets, refetch } = useQuery({
     queryKey: ["datasets"],
     queryFn: api.listDatasets.bind(api),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteDataset(id),
+    onSuccess: (_, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      if (activeDataset?.id === deletedId) {
+        setActiveDataset(null);
+        setActiveConversationId(null);
+      }
+      toast.success("Dataset deleted successfully");
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to delete: ${err.message}`);
+    }
   });
 
   return (
@@ -96,14 +112,28 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
       <div className="p-3 border-b" style={{ borderColor: "var(--border-subtle)" }}>
         {!sidebarCollapsed ? (
           <div>
-            <p className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>
-              DATASET
-            </p>
-            <FileUpload onUploadSuccess={() => { refetch(); }} />
+            {!activeDataset ? (
+              <>
+                <p className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>
+                  DATASET
+                </p>
+                <FileUpload onUploadSuccess={() => { refetch(); }} />
+              </>
+            ) : (
+              <button 
+                onClick={() => { setActiveDataset(null); setActiveConversationId(null); }}
+                className="w-full py-2 px-3 rounded-lg border border-dashed flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--bg-hover)]"
+                style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
+              >
+                <Upload className="w-4 h-4" />
+                Upload New Dataset
+              </button>
+            )}
           </div>
         ) : (
           <button className="flex items-center justify-center w-12 h-12 mx-auto rounded-xl border transition-all"
             style={{ borderColor: "var(--border)", background: "var(--bg-card)", color: "var(--text-secondary)" }}
+            onClick={() => { setActiveDataset(null); setActiveConversationId(null); setSidebarCollapsed(false); }}
             title="Upload dataset">
             <Upload className="w-5 h-5 flex-shrink-0" />
           </button>
@@ -140,8 +170,51 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
         </motion.div>
       )}
 
-      {/* Spacer */}
-      <div className="flex-1" />
+      {/* Spacer / Saved Datasets */}
+      <div className="flex-1 overflow-y-auto px-3 py-2 custom-scrollbar">
+        {!sidebarCollapsed && datasets && datasets.length > 0 && (
+          <div className="flex flex-col gap-2 pb-4">
+            <h4 className="text-xs font-semibold mb-1 mt-2" style={{ color: "var(--text-muted)" }}>SAVED DATASETS</h4>
+            {datasets.map((ds) => (
+              <div 
+                key={ds.id} 
+                className={`flex items-center justify-between p-2.5 rounded-lg border transition-colors ${activeDataset?.id === ds.id ? "bg-[var(--bg-hover)] border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--border-hover)]"}`}
+              >
+                <div 
+                  className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
+                  onClick={() => {
+                    if (activeDataset?.id !== ds.id) {
+                      setActiveConversationId(null);
+                      setActiveDataset({
+                        id: ds.id,
+                        filename: ds.filename,
+                        rows: ds.rows,
+                        columns: ds.columns,
+                        column_names: [],
+                      });
+                    }
+                  }}
+                >
+                  <FileText className="w-4 h-4 flex-shrink-0" style={{ color: "var(--accent)" }} />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                      {ds.filename}
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => deleteMutation.mutate(ds.id)}
+                  disabled={deleteMutation.isPending}
+                  className="btn-ghost p-1.5 flex-shrink-0 hover:bg-red-500/10 hover:text-red-500"
+                  title="Delete dataset"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Model indicator */}
       {!sidebarCollapsed && (

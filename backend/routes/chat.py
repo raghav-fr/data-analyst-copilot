@@ -67,7 +67,7 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     table_data = None
 
     code_intents = {"statistics", "visualization", "filtering", "aggregation",
-                    "feature_engineering", "comparison", "prediction"}
+                    "feature_engineering", "comparison", "prediction", "cleaning", "dataset_info"}
 
     if intent in code_intents:
         code_data = await _generate_pandas_code(request.message, df_info, request.model)
@@ -80,8 +80,10 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                 if execution_result.get("chart_base64"):
                     chart_b64 = execution_result["chart_base64"]
                     chart_url = f"data:image/png;base64,{chart_b64}"
-                if execution_result.get("result"):
+                if execution_result.get("result") is not None:
                     table_data = execution_result["result"]
+                elif execution_result.get("stdout"):
+                    table_data = {"type": "text", "value": execution_result["stdout"].strip()}
             else:
                 # Try to self-heal: regenerate code with error context
                 logger.warning(f"Code execution failed: {execution_result['error']}")
@@ -91,8 +93,10 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
                     execution_result = execute_code(fixed_code, df)
                     if execution_result.get("chart_base64"):
                         chart_url = f"data:image/png;base64,{execution_result['chart_base64']}"
-                    if execution_result.get("result"):
+                    if execution_result.get("result") is not None:
                         table_data = execution_result["result"]
+                    elif execution_result.get("stdout"):
+                        table_data = {"type": "text", "value": execution_result["stdout"].strip()}
 
     # Step 3: Generate AI explanation
     response_text = await _generate_response(
@@ -112,6 +116,7 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     await save_message(
         db, conv_id, "assistant", response_text,
         code=code,
+        chart_path=chart_url,
         result_data={"table": table_data, "intent": intent} if table_data else {"intent": intent},
     )
 
