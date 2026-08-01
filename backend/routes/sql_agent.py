@@ -2,7 +2,8 @@
 import time
 import logging
 import duckdb
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from services.auth_service import get_current_user
 from models.schemas import SQLRequest, SQLResponse
 from services.data_service import get_dataframe
 
@@ -13,7 +14,7 @@ router = APIRouter()
 @router.post("/query", response_model=SQLResponse)
 async def run_sql_query(request: SQLRequest):
     """Execute SQL query against the dataset using DuckDB."""
-    df = get_dataframe(request.dataset_id)
+    df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
@@ -53,9 +54,9 @@ async def run_sql_query(request: SQLRequest):
 
 
 @router.post("/nl-to-sql")
-async def natural_language_to_sql(dataset_id: str, question: str, model: str = "gemini"):
+async def natural_language_to_sql(dataset_id: str, question: str, model: str = "gemini", current_user = Depends(get_current_user)):
     """Convert natural language to SQL and execute it."""
-    df = get_dataframe(dataset_id)
+    df = get_dataframe(dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
@@ -105,9 +106,9 @@ Respond ONLY with a JSON object:
 
 
 @router.get("/schema/{dataset_id}")
-async def get_sql_schema(dataset_id: str):
+async def get_sql_schema(dataset_id: str, current_user = Depends(get_current_user)):
     """Get the DuckDB-compatible schema for a dataset."""
-    df = get_dataframe(dataset_id)
+    df = get_dataframe(dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 

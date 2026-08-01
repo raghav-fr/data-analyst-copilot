@@ -6,8 +6,10 @@ import {
   Brain, Upload, MessageSquare, BarChart3, Database, Wand2,
   Download, Settings, Menu, X, ChevronLeft, ChevronRight,
   FileText, Cpu, Hash, Tag, TrendingUp, AlertCircle,
-  Sparkles, Home, RefreshCw, Trash2
+  Sparkles, Home, RefreshCw, Trash2, LogOut
 } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useAppStore } from "@/lib/store";
@@ -230,7 +232,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
         </div>
       )}
 
-      {/* Settings & Home */}
+      {/* Settings & Home & Logout */}
       <div className={`p-3 border-t flex gap-2 ${sidebarCollapsed ? "flex-col items-center" : "flex-row"}`} style={{ borderColor: "var(--border)" }}>
         <button
           onClick={() => router.push("/")}
@@ -246,6 +248,16 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
           title="Settings">
           <Settings className="w-4 h-4 flex-shrink-0" />
           {!sidebarCollapsed && <span className="ml-2 text-xs">Settings</span>}
+        </button>
+        <button
+          onClick={async () => {
+            await signOut(auth);
+            router.push("/login");
+          }}
+          className={`btn-ghost p-2 flex items-center justify-center ${sidebarCollapsed ? "w-12 h-12 rounded-xl text-red-400" : "text-red-400 hover:bg-red-500/10"}`}
+          style={sidebarCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
+          title="Log out">
+          <LogOut className="w-4 h-4 flex-shrink-0" />
         </button>
       </div>
     </motion.aside>

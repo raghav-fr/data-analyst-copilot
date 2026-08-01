@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 async def get_or_create_conversation(
     db: AsyncSession,
     dataset_id: str,
+    user_id: str,
     conversation_id: Optional[str] = None,
 ) -> str:
     """Get existing or create new conversation. Returns conversation_id."""
@@ -22,7 +23,9 @@ async def get_or_create_conversation(
 
     if conversation_id:
         result = await db.execute(
-            select(Conversation).where(Conversation.id == conversation_id)
+            select(Conversation)
+            .where(Conversation.id == conversation_id)
+            .where(Conversation.user_id == user_id)
         )
         conv = result.scalar_one_or_none()
         if conv:
@@ -31,6 +34,7 @@ async def get_or_create_conversation(
     # Create new
     new_conv = Conversation(
         id=str(uuid.uuid4()),
+        user_id=user_id,
         dataset_id=dataset_id,
         title="New Conversation",
         created_at=datetime.utcnow(),

@@ -9,6 +9,7 @@ from database.db import get_db
 from models.db_models import Dataset
 from models.schemas import UploadResponse
 from services.data_service import load_dataset
+from services.auth_service import get_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -22,6 +23,7 @@ ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls", ".json", ".parquet"}
 async def upload_file(
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
 ):
     """Upload a dataset file. Supports CSV, Excel, JSON, Parquet."""
     # Validate extension
@@ -50,7 +52,7 @@ async def upload_file(
 
     # Load into pandas
     try:
-        dataset_id, df = load_dataset(file_path, file.filename)
+        dataset_id, df = load_dataset(file_path, file.filename, user_id=current_user.uid)
     except Exception as e:
         os.remove(file_path)
         raise HTTPException(status_code=422, detail=f"Failed to parse file: {str(e)}")
@@ -58,6 +60,7 @@ async def upload_file(
     # Save metadata to DB
     db_dataset = Dataset(
         id=dataset_id,
+        user_id=current_user.uid,
         filename=safe_name,
         original_filename=file.filename,
         file_path=file_path,
@@ -82,11 +85,17 @@ async def upload_file(
 
 
 @router.get("/datasets")
-async def list_datasets(db: AsyncSession = Depends(get_db)):
+async def list_datasets(
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     """List all uploaded datasets."""
     from sqlalchemy import select
     result = await db.execute(
-        select(Dataset).order_by(Dataset.created_at.desc()).limit(50)
+        select(Dataset)
+        .where(Dataset.user_id == current_user.uid)
+        .order_by(Dataset.created_at.desc())
+        .limit(50)
     )
     datasets = result.scalars().all()
     return [
@@ -103,10 +112,18 @@ async def list_datasets(db: AsyncSession = Depends(get_db)):
 
 
 @router.delete("/{dataset_id}")
-async def delete_dataset(dataset_id: str, db: AsyncSession = Depends(get_db)):
+async def delete_dataset(
+    dataset_id: str, 
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     """Delete a dataset and its file."""
     from sqlalchemy import select, delete as sql_delete
-    result = await db.execute(select(Dataset).where(Dataset.id == dataset_id))
+    result = await db.execute(
+        select(Dataset)
+        .where(Dataset.id == dataset_id)
+        .where(Dataset.user_id == current_user.uid)
+    )
     dataset = result.scalar_one_or_none()
     if not dataset:
         raise HTTPException(status_code=404, detail="Dataset not found")

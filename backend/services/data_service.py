@@ -17,7 +17,7 @@ _dataframe_store: dict[str, pd.DataFrame] = {}
 _dataset_meta: dict[str, dict] = {}
 
 
-def load_dataset(file_path: str, original_filename: str) -> tuple[str, pd.DataFrame]:
+def load_dataset(file_path: str, original_filename: str, dataset_id: str = None, user_id: str = None) -> tuple[str, pd.DataFrame]:
     """Load a dataset from file and store it. Returns (dataset_id, df)."""
     ext = os.path.splitext(original_filename)[1].lower()
 
@@ -45,21 +45,26 @@ def load_dataset(file_path: str, original_filename: str) -> tuple[str, pd.DataFr
     else:
         raise ValueError(f"Unsupported file type: {ext}")
 
-    dataset_id = str(uuid.uuid4())
+    if not dataset_id:
+        dataset_id = str(uuid.uuid4())
+    
     _dataframe_store[dataset_id] = df
-    _dataset_meta[dataset_id] = {
-        "filename": original_filename,
-        "file_path": file_path,
-        "rows": len(df),
-        "columns": len(df.columns),
-    }
+    if user_id:
+        _dataset_meta[dataset_id] = {
+            "user_id": user_id,
+            "filename": original_filename,
+            "file_path": file_path,
+            "rows": len(df),
+            "columns": len(df.columns),
+        }
     logger.info(f"Loaded dataset {dataset_id}: {len(df)} rows × {len(df.columns)} cols")
     return dataset_id, df
 
 
-def register_dataset_meta(dataset_id: str, filename: str, file_path: str, rows: int, columns: int):
+def register_dataset_meta(dataset_id: str, user_id: str, filename: str, file_path: str, rows: int, columns: int):
     """Register dataset metadata so it can be lazy-loaded later without DB access."""
     _dataset_meta[dataset_id] = {
+        "user_id": user_id,
         "filename": filename,
         "file_path": file_path,
         "rows": rows,
@@ -67,18 +72,18 @@ def register_dataset_meta(dataset_id: str, filename: str, file_path: str, rows: 
     }
 
 
-def get_dataframe(dataset_id: str) -> Optional[pd.DataFrame]:
-    """Get a DataFrame by dataset_id. Tries disk reload if not in memory."""
+def get_dataframe(dataset_id: str, user_id: str) -> Optional[pd.DataFrame]:
+    """Get a DataFrame by dataset_id. Verifies user ownership. Tries disk reload if not in memory."""
+    meta = _dataset_meta.get(dataset_id)
+    if not meta or meta.get("user_id") != user_id:
+        return None
+
     if dataset_id in _dataframe_store:
         return _dataframe_store[dataset_id]
 
     # Try to reload from disk
-    if dataset_id in _dataset_meta:
-        meta = _dataset_meta[dataset_id]
-        _, df = load_dataset(meta["file_path"], meta["filename"])
-        return df
-
-    return None
+    _, df = load_dataset(meta["file_path"], meta["filename"], dataset_id=dataset_id, user_id=user_id)
+    return df
 
 
 def update_dataframe(dataset_id: str, df: pd.DataFrame):

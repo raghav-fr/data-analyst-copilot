@@ -14,6 +14,7 @@ from models.schemas import ChatRequest, ChatResponse
 from services.data_service import get_dataframe, get_df_info, get_dataset_meta
 from services.ai_service import call_ai, extract_json
 from services.executor import execute_code
+from services.auth_service import get_current_user
 from services.memory_service import (
     get_or_create_conversation,
     save_message,
@@ -32,12 +33,16 @@ router = APIRouter()
 
 
 @router.post("/", response_model=ChatResponse)
-async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
+async def chat(
+    request: ChatRequest, 
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     """Main chat endpoint — processes natural language questions about datasets."""
     start_time = time.time()
 
     # Get dataset
-    df = get_dataframe(request.dataset_id)
+    df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found. Please upload a dataset first.")
 
@@ -45,7 +50,7 @@ async def chat(request: ChatRequest, db: AsyncSession = Depends(get_db)):
     df_info = get_df_info(df)
 
     # Get/create conversation
-    conv_id = await get_or_create_conversation(db, request.dataset_id, request.conversation_id)
+    conv_id = await get_or_create_conversation(db, request.dataset_id, current_user.uid, request.conversation_id)
 
     # Save user message
     await save_message(db, conv_id, "user", request.message)
@@ -240,13 +245,18 @@ async def _generate_response(
 
 
 @router.get("/conversations/{dataset_id}")
-async def get_conversations(dataset_id: str, db: AsyncSession = Depends(get_db)):
+async def get_conversations(
+    dataset_id: str, 
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     """Get all conversations for a dataset."""
     from sqlalchemy import select
     from models.db_models import Conversation
     result = await db.execute(
         select(Conversation)
         .where(Conversation.dataset_id == dataset_id)
+        .where(Conversation.user_id == current_user.uid)
         .order_by(Conversation.updated_at.desc())
     )
     convs = result.scalars().all()
@@ -262,13 +272,19 @@ async def get_conversations(dataset_id: str, db: AsyncSession = Depends(get_db))
 
 
 @router.get("/history/{conversation_id}")
-async def get_history(conversation_id: str, db: AsyncSession = Depends(get_db)):
+async def get_history(
+    conversation_id: str, 
+    db: AsyncSession = Depends(get_db),
+    current_user = Depends(get_current_user),
+):
     """Get full message history for a conversation."""
     from sqlalchemy import select
-    from models.db_models import Message
+    from models.db_models import Message, Conversation
     result = await db.execute(
         select(Message)
+        .join(Conversation)
         .where(Message.conversation_id == conversation_id)
+        .where(Conversation.user_id == current_user.uid)
         .order_by(Message.created_at)
     )
     msgs = result.scalars().all()

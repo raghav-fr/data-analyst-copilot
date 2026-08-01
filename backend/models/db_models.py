@@ -9,6 +9,7 @@ class Dataset(Base):
     __tablename__ = "datasets"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128))
     filename: Mapped[str] = mapped_column(String(255))
     original_filename: Mapped[str] = mapped_column(String(255))
     file_path: Mapped[str] = mapped_column(String(512))
@@ -26,6 +27,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128))
     dataset_id: Mapped[str] = mapped_column(String(64), ForeignKey("datasets.id"))
     title: Mapped[str] = mapped_column(String(255), default="New Conversation")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -54,6 +56,7 @@ class Analysis(Base):
     __tablename__ = "analyses"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[str] = mapped_column(String(128))
     dataset_id: Mapped[str] = mapped_column(String(64), ForeignKey("datasets.id"))
     analysis_type: Mapped[str] = mapped_column(String(50))  # eda|stats|ml|cleaning
     title: Mapped[str] = mapped_column(String(255))

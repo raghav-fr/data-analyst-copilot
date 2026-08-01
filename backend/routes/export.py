@@ -4,7 +4,8 @@ import io
 import uuid
 import logging
 from datetime import datetime
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from services.auth_service import get_current_user
 from fastapi.responses import FileResponse, StreamingResponse
 from models.schemas import ExportRequest
 from services.data_service import get_dataframe, get_dataset_meta
@@ -18,7 +19,7 @@ OUTPUT_DIR = os.getenv("OUTPUT_DIR", "outputs")
 @router.post("/")
 async def export_dataset(request: ExportRequest):
     """Export dataset in the requested format."""
-    df = get_dataframe(request.dataset_id)
+    df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 

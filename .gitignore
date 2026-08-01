@@ -170,3 +170,4 @@ frontend/.env.local
 backend/.env
 backend/.env.example
 backend/data_copilot.db
+backend/firebase-admin.json

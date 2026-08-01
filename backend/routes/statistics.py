@@ -1,7 +1,8 @@
 """Statistics route — descriptive stats, correlation, ANOVA, regression."""
 import logging
 import json
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from services.auth_service import get_current_user
 from models.schemas import StatRequest, StatResponse
 from services.data_service import get_dataframe
 from services.chart_service import generate_correlation_heatmap, generate_histogram
@@ -14,7 +15,7 @@ router = APIRouter()
 @router.post("/analyze", response_model=StatResponse)
 async def analyze_statistics(request: StatRequest):
     """Run statistical analysis on the dataset."""
-    df = get_dataframe(request.dataset_id)
+    df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 

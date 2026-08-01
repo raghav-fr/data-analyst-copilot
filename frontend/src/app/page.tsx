@@ -109,7 +109,7 @@ export default function LandingPage() {
             <Globe className="w-4 h-4" /> GitHub
           </a>
           <button
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push("/login")}
             className="btn-primary flex items-center gap-2">
             Launch App <ArrowRight className="w-4 h-4" />
           </button>
@@ -147,7 +147,7 @@ export default function LandingPage() {
             <motion.button
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push("/signup")}
               className="btn-primary flex items-center gap-2 text-base px-8 py-3"
               style={{ borderRadius: "12px" }}>
               <Zap className="w-5 h-5" />
@@ -335,7 +335,7 @@ export default function LandingPage() {
             <motion.button
               whileHover={{ scale: 1.04 }}
               whileTap={{ scale: 0.97 }}
-              onClick={() => router.push("/dashboard")}
+              onClick={() => router.push("/login")}
               className="btn-primary flex items-center gap-2 mx-auto text-base px-10 py-3"
               style={{ borderRadius: "12px" }}>
               Open Dashboard <ChevronRight className="w-5 h-5" />

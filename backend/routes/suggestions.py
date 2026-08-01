@@ -1,6 +1,7 @@
 """Suggestions route — AI-generated questions after dataset upload."""
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from services.auth_service import get_current_user
 from models.schemas import SuggestionsResponse, SuggestedQuestion
 from services.data_service import get_dataframe, get_df_info, get_dataset_meta
 from services.ai_service import call_ai, extract_json
@@ -12,9 +13,9 @@ router = APIRouter()
 
 
 @router.get("/{dataset_id}", response_model=SuggestionsResponse)
-async def get_suggested_questions(dataset_id: str, model: str = "gemini"):
+async def get_suggested_questions(dataset_id: str, model: str = "gemini", current_user = Depends(get_current_user)):
     """Generate AI-powered suggested questions for a dataset."""
-    df = get_dataframe(dataset_id)
+    df = get_dataframe(dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 

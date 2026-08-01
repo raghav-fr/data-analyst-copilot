@@ -1,6 +1,7 @@
 """Cleaning route — data cleaning operations."""
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+from services.auth_service import get_current_user
 from models.schemas import CleaningRequest, CleaningResponse
 from services.data_service import get_dataframe, update_dataframe
 
@@ -11,7 +12,7 @@ router = APIRouter()
 @router.post("/", response_model=CleaningResponse)
 async def clean_data(request: CleaningRequest):
     """Apply a cleaning operation to the dataset."""
-    df = get_dataframe(request.dataset_id)
+    df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
@@ -120,9 +121,9 @@ async def clean_data(request: CleaningRequest):
 
 
 @router.get("/suggestions/{dataset_id}")
-async def get_cleaning_suggestions(dataset_id: str):
+async def get_cleaning_suggestions(dataset_id: str, current_user = Depends(get_current_user)):
     """Get AI-powered cleaning recommendations."""
-    df = get_dataframe(dataset_id)
+    df = get_dataframe(dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 

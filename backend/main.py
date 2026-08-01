@@ -47,7 +47,7 @@ async def lifespan(app: FastAPI):
         async with AsyncSessionLocal() as session:
             result = await session.execute(select(Dataset))
             for d in result.scalars().all():
-                register_dataset_meta(d.id, d.original_filename, d.file_path, d.rows, d.columns)
+                register_dataset_meta(d.id, d.user_id, d.original_filename, d.file_path, d.rows, d.columns)
         logger.info("✅ Dataset metadata registered")
     except Exception as e:
         logger.warning(f"Could not register dataset metadata: {e}")

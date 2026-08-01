@@ -1,6 +1,7 @@
 """EDA route — automatic exploratory data analysis."""
 import logging
-from fastapi import APIRouter, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from services.auth_service import get_current_user
 from models.schemas import EDAResponse, EDAChart
 from services.data_service import get_dataframe, get_df_info, get_dataset_meta
 from services.chart_service import (
@@ -21,9 +22,9 @@ async def run_eda(
     dataset_id: str,
     include_insights: bool = True,
     max_charts: int = 20,
-):
+    current_user = Depends(get_current_user)):
     """Run automatic EDA on a dataset. Returns charts with AI explanations."""
-    df = get_dataframe(dataset_id)
+    df = get_dataframe(dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
