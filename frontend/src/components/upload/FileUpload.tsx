@@ -3,9 +3,9 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-import { api, UploadResponse } from "@/lib/api";
+import { Upload, FileText, X, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, UploadResponse, Dataset } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import { formatBytes } from "@/lib/utils";
 import { toast } from "sonner";
@@ -25,12 +25,35 @@ interface FileWithStatus {
 
 export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
   const [fileState, setFileState] = useState<FileWithStatus | null>(null);
-  const { setActiveDataset } = useAppStore();
+  const { activeDataset, setActiveDataset, setActiveConversationId } = useAppStore();
+  const queryClient = useQueryClient();
+
+  const { data: datasets } = useQuery({
+    queryKey: ["datasets"],
+    queryFn: () => api.listDatasets(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteDataset(id),
+    onSuccess: (_, deletedId) => {
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+      if (activeDataset?.id === deletedId) {
+        setActiveDataset(null);
+        setActiveConversationId(null);
+      }
+      toast.success("Dataset deleted successfully");
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to delete: ${err.message}`);
+    }
+  });
 
   const uploadMutation = useMutation({
     mutationFn: (file: File) => api.uploadFile(file),
     onSuccess: (data) => {
       setFileState((prev) => prev ? { ...prev, status: "success", progress: 100 } : null);
+      setActiveConversationId(null);
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
       setActiveDataset({
         id: data.dataset_id,
         filename: data.filename,
@@ -199,6 +222,53 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Saved Datasets Section */}
+      {datasets && datasets.length > 0 && (
+        <div className="mt-8 border-t pt-4" style={{ borderColor: "var(--border-subtle)" }}>
+          <h4 className="text-sm font-semibold mb-3" style={{ color: "var(--text-primary)" }}>Saved Datasets</h4>
+          <div className="flex flex-col gap-2 max-h-60 overflow-y-auto pr-1 custom-scrollbar">
+            {datasets.map((ds) => (
+              <div 
+                key={ds.id} 
+                className={`flex items-center justify-between p-3 rounded-lg border transition-colors ${activeDataset?.id === ds.id ? "bg-[var(--bg-hover)] border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--border-hover)]"}`}
+              >
+                <div 
+                  className="flex items-center gap-3 min-w-0 flex-1 cursor-pointer"
+                  onClick={() => {
+                    setActiveConversationId(null);
+                    setActiveDataset({
+                      id: ds.id,
+                      filename: ds.filename,
+                      rows: ds.rows,
+                      columns: ds.columns,
+                      column_names: [],
+                    });
+                  }}
+                >
+                  <FileText className="w-5 h-5 flex-shrink-0" style={{ color: "var(--accent)" }} />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: "var(--text-primary)" }}>
+                      {ds.filename}
+                    </p>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      {formatBytes(ds.file_size)} • {ds.rows.toLocaleString()} rows
+                    </p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => deleteMutation.mutate(ds.id)}
+                  disabled={deleteMutation.isPending}
+                  className="btn-ghost p-2 flex-shrink-0 hover:bg-red-500/10 hover:text-red-500"
+                  title="Delete dataset"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
