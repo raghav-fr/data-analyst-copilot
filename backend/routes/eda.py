@@ -28,7 +28,7 @@ async def run_eda(
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    meta = get_dataset_meta(dataset_id) or {}
+    meta = get_dataset_meta(dataset_id, current_user.uid) or {}
     df_info = get_df_info(df)
     charts = []
 

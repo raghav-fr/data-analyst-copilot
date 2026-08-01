@@ -2,11 +2,10 @@
 import os
 import uuid
 import logging
+import tempfile
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from firebase_admin import firestore, storage
 
-from database.db import get_db
-from models.db_models import Dataset
 from models.schemas import UploadResponse
 from services.data_service import load_dataset
 from services.auth_service import get_current_user
@@ -14,7 +13,6 @@ from services.auth_service import get_current_user
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-UPLOAD_DIR = os.getenv("UPLOAD_DIR", "uploads")
 MAX_FILE_SIZE = int(os.getenv("MAX_FILE_SIZE_MB", 100)) * 1024 * 1024
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls", ".json", ".parquet"}
 
@@ -22,7 +20,6 @@ ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls", ".json", ".parquet"}
 @router.post("/", response_model=UploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
     """Upload a dataset file. Supports CSV, Excel, JSON, Parquet."""
@@ -42,34 +39,46 @@ async def upload_file(
             detail=f"File too large. Max size: {MAX_FILE_SIZE // 1024 // 1024}MB"
         )
 
-    # Save to disk
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-    safe_name = f"{uuid.uuid4().hex}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, safe_name)
-
-    with open(file_path, "wb") as f:
-        f.write(content)
+    dataset_id = str(uuid.uuid4())
+    safe_name = f"{dataset_id}{ext}"
+    
+    # Save to temp file to load with Pandas
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
+        temp_file.write(content)
+        temp_file_path = temp_file.name
 
     # Load into pandas
     try:
-        dataset_id, df = load_dataset(file_path, file.filename, user_id=current_user.uid)
+        _, df = load_dataset(temp_file_path, file.filename, dataset_id=dataset_id, user_id=current_user.uid)
     except Exception as e:
-        os.remove(file_path)
+        os.remove(temp_file_path)
         raise HTTPException(status_code=422, detail=f"Failed to parse file: {str(e)}")
 
-    # Save metadata to DB
-    db_dataset = Dataset(
-        id=dataset_id,
-        user_id=current_user.uid,
-        filename=safe_name,
-        original_filename=file.filename,
-        file_path=file_path,
-        file_size=len(content),
-        rows=len(df),
-        columns=len(df.columns),
-    )
-    db.add(db_dataset)
-    await db.commit()
+    # Upload to Firebase Storage
+    try:
+        bucket = storage.bucket()
+        blob = bucket.blob(f"users/{current_user.uid}/datasets/{dataset_id}/{safe_name}")
+        blob.upload_from_filename(temp_file_path)
+    except Exception as e:
+        os.remove(temp_file_path)
+        raise HTTPException(status_code=500, detail=f"Failed to upload to storage: {str(e)}")
+        
+    os.remove(temp_file_path)
+
+    # Save metadata to Firestore
+    db = firestore.client()
+    doc_ref = db.collection('users').document(current_user.uid).collection('datasets').document(dataset_id)
+    doc_ref.set({
+        'id': dataset_id,
+        'user_id': current_user.uid,
+        'filename': safe_name,
+        'original_filename': file.filename,
+        'file_path': f"users/{current_user.uid}/datasets/{dataset_id}/{safe_name}",
+        'file_size': len(content),
+        'rows': len(df),
+        'columns': len(df.columns),
+        'created_at': firestore.SERVER_TIMESTAMP
+    })
 
     logger.info(f"Uploaded: {file.filename} → {dataset_id} ({len(df)} rows × {len(df.columns)} cols)")
 
@@ -86,52 +95,58 @@ async def upload_file(
 
 @router.get("/datasets")
 async def list_datasets(
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
     """List all uploaded datasets."""
-    from sqlalchemy import select
-    result = await db.execute(
-        select(Dataset)
-        .where(Dataset.user_id == current_user.uid)
-        .order_by(Dataset.created_at.desc())
-        .limit(50)
-    )
-    datasets = result.scalars().all()
-    return [
-        {
-            "id": d.id,
-            "filename": d.original_filename,
-            "rows": d.rows,
-            "columns": d.columns,
-            "file_size": d.file_size,
-            "created_at": d.created_at.isoformat(),
-        }
-        for d in datasets
-    ]
+    db = firestore.client()
+    datasets_ref = db.collection('users').document(current_user.uid).collection('datasets')
+    query = datasets_ref.order_by('created_at', direction=firestore.Query.DESCENDING).limit(50)
+    docs = query.stream()
+    
+    datasets = []
+    for doc in docs:
+        d = doc.to_dict()
+        created_at = d.get('created_at')
+        if created_at:
+            created_at = created_at.isoformat()
+        else:
+            created_at = ""
+            
+        datasets.append({
+            "id": d.get("id"),
+            "filename": d.get("original_filename"),
+            "rows": d.get("rows", 0),
+            "columns": d.get("columns", 0),
+            "file_size": d.get("file_size", 0),
+            "created_at": created_at,
+        })
+    return datasets
 
 
 @router.delete("/{dataset_id}")
 async def delete_dataset(
     dataset_id: str, 
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
     """Delete a dataset and its file."""
-    from sqlalchemy import select, delete as sql_delete
-    result = await db.execute(
-        select(Dataset)
-        .where(Dataset.id == dataset_id)
-        .where(Dataset.user_id == current_user.uid)
-    )
-    dataset = result.scalar_one_or_none()
-    if not dataset:
+    db = firestore.client()
+    doc_ref = db.collection('users').document(current_user.uid).collection('datasets').document(dataset_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
         raise HTTPException(status_code=404, detail="Dataset not found")
+        
+    dataset_data = doc.to_dict()
+    file_path = dataset_data.get('file_path')
+    
+    # Remove file from Firebase Storage
+    if file_path:
+        try:
+            bucket = storage.bucket()
+            blob = bucket.blob(file_path)
+            blob.delete()
+        except Exception as e:
+            logger.warning(f"Could not delete file from storage: {e}")
 
-    # Remove file
-    if os.path.exists(dataset.file_path):
-        os.remove(dataset.file_path)
-
-    await db.execute(sql_delete(Dataset).where(Dataset.id == dataset_id))
-    await db.commit()
+    doc_ref.delete()
     return {"message": "Dataset deleted successfully"}

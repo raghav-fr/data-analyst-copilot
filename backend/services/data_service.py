@@ -4,17 +4,17 @@ Uses a session store keyed by dataset_id.
 """
 import os
 import uuid
-import hashlib
 import logging
+import tempfile
 from typing import Optional
 import pandas as pd
 import numpy as np
+from firebase_admin import firestore, storage
 
 logger = logging.getLogger(__name__)
 
 # In-memory store: dataset_id -> DataFrame
 _dataframe_store: dict[str, pd.DataFrame] = {}
-_dataset_meta: dict[str, dict] = {}
 
 
 def load_dataset(file_path: str, original_filename: str, dataset_id: str = None, user_id: str = None) -> tuple[str, pd.DataFrame]:
@@ -49,53 +49,65 @@ def load_dataset(file_path: str, original_filename: str, dataset_id: str = None,
         dataset_id = str(uuid.uuid4())
     
     _dataframe_store[dataset_id] = df
-    if user_id:
-        _dataset_meta[dataset_id] = {
-            "user_id": user_id,
-            "filename": original_filename,
-            "file_path": file_path,
-            "rows": len(df),
-            "columns": len(df.columns),
-        }
     logger.info(f"Loaded dataset {dataset_id}: {len(df)} rows × {len(df.columns)} cols")
     return dataset_id, df
 
 
-def register_dataset_meta(dataset_id: str, user_id: str, filename: str, file_path: str, rows: int, columns: int):
-    """Register dataset metadata so it can be lazy-loaded later without DB access."""
-    _dataset_meta[dataset_id] = {
-        "user_id": user_id,
-        "filename": filename,
-        "file_path": file_path,
-        "rows": rows,
-        "columns": columns,
-    }
-
-
 def get_dataframe(dataset_id: str, user_id: str) -> Optional[pd.DataFrame]:
-    """Get a DataFrame by dataset_id. Verifies user ownership. Tries disk reload if not in memory."""
-    meta = _dataset_meta.get(dataset_id)
-    if not meta or meta.get("user_id") != user_id:
-        return None
-
+    """Get a DataFrame by dataset_id. Verifies user ownership. Tries Firebase Storage download if not in memory."""
     if dataset_id in _dataframe_store:
         return _dataframe_store[dataset_id]
 
-    # Try to reload from disk
-    _, df = load_dataset(meta["file_path"], meta["filename"], dataset_id=dataset_id, user_id=user_id)
+    db = firestore.client()
+    doc_ref = db.collection('users').document(user_id).collection('datasets').document(dataset_id)
+    doc = doc_ref.get()
+    
+    if not doc.exists:
+        return None
+        
+    meta = doc.to_dict()
+    file_path = meta.get("file_path")
+    original_filename = meta.get("original_filename")
+    if not file_path:
+        return None
+
+    bucket = storage.bucket()
+    blob = bucket.blob(file_path)
+    
+    ext = os.path.splitext(original_filename)[1].lower()
+    
+    with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as temp_file:
+        blob.download_to_filename(temp_file.name)
+        temp_file_path = temp_file.name
+
+    try:
+        _, df = load_dataset(temp_file_path, original_filename, dataset_id=dataset_id, user_id=user_id)
+    finally:
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+            
     return df
 
 
-def update_dataframe(dataset_id: str, df: pd.DataFrame):
-    """Replace the DataFrame for a dataset (after cleaning ops)."""
+def update_dataframe(dataset_id: str, df: pd.DataFrame, user_id: str):
+    """Replace the DataFrame for a dataset (after cleaning ops). Updates Firestore."""
     _dataframe_store[dataset_id] = df
-    if dataset_id in _dataset_meta:
-        _dataset_meta[dataset_id]["rows"] = len(df)
-        _dataset_meta[dataset_id]["columns"] = len(df.columns)
+    db = firestore.client()
+    doc_ref = db.collection('users').document(user_id).collection('datasets').document(dataset_id)
+    if doc_ref.get().exists:
+        doc_ref.update({
+            "rows": len(df),
+            "columns": len(df.columns)
+        })
 
 
-def get_dataset_meta(dataset_id: str) -> Optional[dict]:
-    return _dataset_meta.get(dataset_id)
+def get_dataset_meta(dataset_id: str, user_id: str) -> Optional[dict]:
+    db = firestore.client()
+    doc_ref = db.collection('users').document(user_id).collection('datasets').document(dataset_id)
+    doc = doc_ref.get()
+    if doc.exists:
+        return doc.to_dict()
+    return None
 
 
 def get_df_info(df: pd.DataFrame) -> dict:

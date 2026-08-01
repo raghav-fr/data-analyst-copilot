@@ -23,7 +23,7 @@ async def export_dataset(request: ExportRequest):
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    meta = get_dataset_meta(request.dataset_id) or {}
+    meta = get_dataset_meta(request.dataset_id, current_user.uid) or {}
     filename = meta.get("filename", "export")
     base_name = os.path.splitext(filename)[0]
 

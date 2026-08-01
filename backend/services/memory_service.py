@@ -1,53 +1,50 @@
 """
-Memory Service — conversation history management using SQLite.
+Memory Service — conversation history management using Firestore.
 """
 import uuid
 import logging
 from datetime import datetime
-from sqlalchemy import select, desc
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from models.db_models import Conversation, Message
+from typing import Optional
+from firebase_admin import firestore
 
 logger = logging.getLogger(__name__)
 
 
+def get_db():
+    return firestore.client()
+
+
 async def get_or_create_conversation(
-    db: AsyncSession,
     dataset_id: str,
     user_id: str,
     conversation_id: Optional[str] = None,
 ) -> str:
     """Get existing or create new conversation. Returns conversation_id."""
-    from typing import Optional
-
+    db = get_db()
+    
     if conversation_id:
-        result = await db.execute(
-            select(Conversation)
-            .where(Conversation.id == conversation_id)
-            .where(Conversation.user_id == user_id)
-        )
-        conv = result.scalar_one_or_none()
-        if conv:
-            return conv.id
+        doc_ref = db.collection('users').document(user_id).collection('conversations').document(conversation_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            return doc.id
 
     # Create new
-    new_conv = Conversation(
-        id=str(uuid.uuid4()),
-        user_id=user_id,
-        dataset_id=dataset_id,
-        title="New Conversation",
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow(),
-    )
-    db.add(new_conv)
-    await db.commit()
-    return new_conv.id
+    new_id = str(uuid.uuid4())
+    doc_ref = db.collection('users').document(user_id).collection('conversations').document(new_id)
+    doc_ref.set({
+        'id': new_id,
+        'user_id': user_id,
+        'dataset_id': dataset_id,
+        'title': "New Conversation",
+        'created_at': firestore.SERVER_TIMESTAMP,
+        'updated_at': firestore.SERVER_TIMESTAMP,
+    })
+    return new_id
 
 
 async def save_message(
-    db: AsyncSession,
     conversation_id: str,
+    user_id: str,
     role: str,
     content: str,
     code: Optional[str] = None,
@@ -55,57 +52,68 @@ async def save_message(
     result_data: Optional[dict] = None,
 ) -> str:
     """Save a message to the conversation. Returns message_id."""
-    from typing import Optional
-    msg = Message(
-        id=str(uuid.uuid4()),
-        conversation_id=conversation_id,
-        role=role,
-        content=content,
-        code=code,
-        chart_path=chart_path,
-        result_data=result_data,
-        created_at=datetime.utcnow(),
-    )
-    db.add(msg)
-    await db.commit()
-    return msg.id
+    db = get_db()
+    msg_id = str(uuid.uuid4())
+    
+    doc_ref = db.collection('users').document(user_id).collection('conversations').document(conversation_id).collection('messages').document(msg_id)
+    doc_ref.set({
+        'id': msg_id,
+        'conversation_id': conversation_id,
+        'role': role,
+        'content': content,
+        'code': code,
+        'chart_path': chart_path,
+        'result_data': result_data,
+        'created_at': firestore.SERVER_TIMESTAMP,
+    })
+    
+    # Update conversation updated_at
+    db.collection('users').document(user_id).collection('conversations').document(conversation_id).update({
+        'updated_at': firestore.SERVER_TIMESTAMP
+    })
+    
+    return msg_id
 
 
 async def get_conversation_history(
-    db: AsyncSession,
     conversation_id: str,
+    user_id: str,
     limit: int = 20,
 ) -> list[dict]:
     """Get recent messages from a conversation."""
-    result = await db.execute(
-        select(Message)
-        .where(Message.conversation_id == conversation_id)
-        .order_by(desc(Message.created_at))
-        .limit(limit)
-    )
-    messages = result.scalars().all()
+    db = get_db()
+    messages_ref = db.collection('users').document(user_id).collection('conversations').document(conversation_id).collection('messages')
+    
+    query = messages_ref.order_by('created_at', direction=firestore.Query.DESCENDING).limit(limit)
+    docs = query.stream()
+    
+    messages = []
+    for doc in docs:
+        data = doc.to_dict()
+        messages.append({
+            "role": data.get("role"),
+            "content": data.get("content"),
+            "code": data.get("code")
+        })
+        
     # Return in chronological order
-    return [
-        {"role": msg.role, "content": msg.content, "code": msg.code}
-        for msg in reversed(messages)
-    ]
+    return list(reversed(messages))
 
 
 async def update_conversation_title(
-    db: AsyncSession,
     conversation_id: str,
+    user_id: str,
     first_message: str,
 ):
     """Auto-generate conversation title from first message."""
     title = first_message[:50] + ("..." if len(first_message) > 50 else "")
-    result = await db.execute(
-        select(Conversation).where(Conversation.id == conversation_id)
-    )
-    conv = result.scalar_one_or_none()
-    if conv and conv.title == "New Conversation":
-        conv.title = title
-        conv.updated_at = datetime.utcnow()
-        await db.commit()
-
-
-from typing import Optional
+    db = get_db()
+    
+    doc_ref = db.collection('users').document(user_id).collection('conversations').document(conversation_id)
+    doc = doc_ref.get()
+    
+    if doc.exists and doc.to_dict().get("title") == "New Conversation":
+        doc_ref.update({
+            'title': title,
+            'updated_at': firestore.SERVER_TIMESTAMP
+        })

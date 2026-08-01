@@ -7,9 +7,8 @@ import time
 import json
 import logging
 from fastapi import APIRouter, HTTPException, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from firebase_admin import firestore
 
-from database.db import get_db
 from models.schemas import ChatRequest, ChatResponse
 from services.data_service import get_dataframe, get_df_info, get_dataset_meta
 from services.ai_service import call_ai, extract_json
@@ -35,7 +34,6 @@ router = APIRouter()
 @router.post("/", response_model=ChatResponse)
 async def chat(
     request: ChatRequest, 
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
     """Main chat endpoint — processes natural language questions about datasets."""
@@ -46,18 +44,18 @@ async def chat(
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found. Please upload a dataset first.")
 
-    meta = get_dataset_meta(request.dataset_id) or {}
+    meta = get_dataset_meta(request.dataset_id, current_user.uid) or {}
     df_info = get_df_info(df)
 
     # Get/create conversation
-    conv_id = await get_or_create_conversation(db, request.dataset_id, current_user.uid, request.conversation_id)
+    conv_id = await get_or_create_conversation(request.dataset_id, current_user.uid, request.conversation_id)
 
     # Save user message
-    await save_message(db, conv_id, "user", request.message)
-    await update_conversation_title(db, conv_id, request.message)
+    await save_message(conv_id, current_user.uid, "user", request.message)
+    await update_conversation_title(conv_id, current_user.uid, request.message)
 
     # Get conversation history for context
-    history = await get_conversation_history(db, conv_id, limit=8)
+    history = await get_conversation_history(conv_id, current_user.uid, limit=8)
 
     # Step 1: Detect intent
     intent_data = await _detect_intent(request.message, df_info)
@@ -115,11 +113,10 @@ async def chat(
     )
 
     elapsed_ms = int((time.time() - start_time) * 1000)
-    msg_id = str(uuid.uuid4())
-
+    
     # Save assistant message
-    await save_message(
-        db, conv_id, "assistant", response_text,
+    msg_id = await save_message(
+        conv_id, current_user.uid, "assistant", response_text,
         code=code,
         chart_path=chart_url,
         result_data={"table": table_data, "intent": intent} if table_data else {"intent": intent},
@@ -247,56 +244,69 @@ async def _generate_response(
 @router.get("/conversations/{dataset_id}")
 async def get_conversations(
     dataset_id: str, 
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
     """Get all conversations for a dataset."""
-    from sqlalchemy import select
-    from models.db_models import Conversation
-    result = await db.execute(
-        select(Conversation)
-        .where(Conversation.dataset_id == dataset_id)
-        .where(Conversation.user_id == current_user.uid)
-        .order_by(Conversation.updated_at.desc())
-    )
-    convs = result.scalars().all()
-    return [
-        {
-            "id": c.id,
-            "title": c.title,
-            "created_at": c.created_at.isoformat(),
-            "updated_at": c.updated_at.isoformat(),
-        }
-        for c in convs
-    ]
+    db = firestore.client()
+    convs_ref = db.collection('users').document(current_user.uid).collection('conversations')
+    query = convs_ref.where('dataset_id', '==', dataset_id).order_by('updated_at', direction=firestore.Query.DESCENDING)
+    docs = query.stream()
+    
+    convs = []
+    for doc in docs:
+        c = doc.to_dict()
+        created_at = c.get('created_at')
+        updated_at = c.get('updated_at')
+        if created_at:
+            created_at = created_at.isoformat()
+        else:
+            created_at = ""
+        if updated_at:
+            updated_at = updated_at.isoformat()
+        else:
+            updated_at = ""
+            
+        convs.append({
+            "id": c.get("id"),
+            "title": c.get("title", "Conversation"),
+            "created_at": created_at,
+            "updated_at": updated_at,
+        })
+    return convs
 
 
 @router.get("/history/{conversation_id}")
 async def get_history(
     conversation_id: str, 
-    db: AsyncSession = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
     """Get full message history for a conversation."""
-    from sqlalchemy import select
-    from models.db_models import Message, Conversation
-    result = await db.execute(
-        select(Message)
-        .join(Conversation)
-        .where(Message.conversation_id == conversation_id)
-        .where(Conversation.user_id == current_user.uid)
-        .order_by(Message.created_at)
-    )
-    msgs = result.scalars().all()
-    return [
-        {
-            "id": m.id,
-            "role": m.role,
-            "content": m.content,
-            "code": m.code,
-            "chart_path": m.chart_path,
-            "result_data": m.result_data,
-            "created_at": m.created_at.isoformat(),
-        }
-        for m in msgs
-    ]
+    db = firestore.client()
+    # First verify user owns the conversation
+    conv_doc = db.collection('users').document(current_user.uid).collection('conversations').document(conversation_id).get()
+    if not conv_doc.exists:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+        
+    messages_ref = db.collection('users').document(current_user.uid).collection('conversations').document(conversation_id).collection('messages')
+    query = messages_ref.order_by('created_at', direction=firestore.Query.ASCENDING)
+    docs = query.stream()
+    
+    msgs = []
+    for doc in docs:
+        m = doc.to_dict()
+        created_at = m.get('created_at')
+        if created_at:
+            created_at = created_at.isoformat()
+        else:
+            created_at = ""
+            
+        msgs.append({
+            "id": m.get("id"),
+            "role": m.get("role"),
+            "content": m.get("content"),
+            "code": m.get("code"),
+            "chart_path": m.get("chart_path"),
+            "result_data": m.get("result_data"),
+            "created_at": created_at,
+        })
+    return msgs

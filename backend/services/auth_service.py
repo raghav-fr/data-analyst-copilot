@@ -23,6 +23,9 @@ def init_firebase():
             # 2. Try to initialize using a base64 encoded JSON string
             cred_base64 = os.getenv("FIREBASE_SERVICE_ACCOUNT_BASE64")
             
+            # 3. Get Storage Bucket
+            storage_bucket = os.getenv("FIREBASE_STORAGE_BUCKET", "data-analyst-copilot.firebasestorage.app")
+            
             if cred_path:
                 if not os.path.isabs(cred_path):
                     # Resolve relative to the backend directory
@@ -31,17 +34,17 @@ def init_firebase():
             
             if cred_path and os.path.exists(cred_path):
                 cred = credentials.Certificate(cred_path)
-                firebase_admin.initialize_app(cred)
+                firebase_admin.initialize_app(cred, {'storageBucket': storage_bucket})
                 logger.info("Firebase Admin initialized using service account path.")
             elif cred_base64:
                 decoded = base64.b64decode(cred_base64).decode("utf-8")
                 cred_dict = json.loads(decoded)
                 cred = credentials.Certificate(cred_dict)
-                firebase_admin.initialize_app(cred)
+                firebase_admin.initialize_app(cred, {'storageBucket': storage_bucket})
                 logger.info("Firebase Admin initialized using base64 credentials.")
             else:
-                # 3. Fallback: tries to use GOOGLE_APPLICATION_CREDENTIALS or default credentials
-                firebase_admin.initialize_app()
+                # 4. Fallback: tries to use GOOGLE_APPLICATION_CREDENTIALS or default credentials
+                firebase_admin.initialize_app(options={'storageBucket': storage_bucket})
                 logger.info("Firebase Admin initialized using default credentials.")
         except Exception as e:
             logger.warning(f"Could not initialize Firebase Admin SDK: {e}. Auth will fail.")

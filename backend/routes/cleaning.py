@@ -101,7 +101,7 @@ async def clean_data(request: CleaningRequest):
             raise HTTPException(status_code=400, detail=f"Unknown operation: {op}")
 
         # Update in-memory store
-        update_dataframe(request.dataset_id, df)
+        update_dataframe(request.dataset_id, df, current_user.uid)
 
         return CleaningResponse(
             dataset_id=request.dataset_id,

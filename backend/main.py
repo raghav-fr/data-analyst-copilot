@@ -14,7 +14,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
-from database.db import init_db
 from routes import upload, profile, eda, chat, statistics, cleaning, export, sql_agent, suggestions
 
 # Configure logging
@@ -34,23 +33,9 @@ os.makedirs("outputs/reports", exist_ok=True)
 async def lifespan(app: FastAPI):
     """Application lifespan — startup and shutdown."""
     logger.info("🚀 Starting Data Analyst Copilot API...")
-    await init_db()
-    logger.info("✅ Database initialized")
     
-    # Pre-load metadata for all datasets from the DB so data_service can lazy-load dataframes
-    from database.db import AsyncSessionLocal
-    from sqlalchemy import select
-    from models.db_models import Dataset
-    from services.data_service import register_dataset_meta
-    
-    try:
-        async with AsyncSessionLocal() as session:
-            result = await session.execute(select(Dataset))
-            for d in result.scalars().all():
-                register_dataset_meta(d.id, d.user_id, d.original_filename, d.file_path, d.rows, d.columns)
-        logger.info("✅ Dataset metadata registered")
-    except Exception as e:
-        logger.warning(f"Could not register dataset metadata: {e}")
+    # Firestore and Storage are initialized globally via auth_service.py
+    logger.info("✅ Firebase services ready")
 
     yield
     logger.info("🛑 Shutting down...")

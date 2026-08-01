@@ -16,7 +16,7 @@ async def get_profile(dataset_id: str, current_user = Depends(get_current_user))
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
 
-    meta = get_dataset_meta(dataset_id) or {}
+    meta = get_dataset_meta(dataset_id, current_user.uid) or {}
     filename = meta.get("filename", "Unknown")
 
     profile = build_profile(df, dataset_id, filename)
