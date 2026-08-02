@@ -3,24 +3,27 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
-import { Upload, FileText, X, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react";
+import { Upload, FileText, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, UploadResponse, Dataset } from "@/lib/api";
+import { api, Dataset } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import { formatBytes } from "@/lib/utils";
 import { toast } from "sonner";
+import { auth } from "@/lib/firebase";
+import { getStorage, ref, uploadBytesResumable } from "firebase/storage";
 
 interface FileUploadProps {
-  onUploadSuccess?: (data: UploadResponse) => void;
+  onUploadSuccess?: (data: any) => void;
 }
 
-type UploadStatus = "idle" | "uploading" | "success" | "error";
+type UploadStatus = "idle" | "uploading" | "processing" | "success" | "error";
 
 interface FileWithStatus {
   file: File;
   status: UploadStatus;
   error?: string;
   progress: number;
+  datasetId?: string;
 }
 
 export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
@@ -28,66 +31,97 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
   const { activeDataset, setActiveDataset, setActiveConversationId } = useAppStore();
   const queryClient = useQueryClient();
 
-  const { data: datasets } = useQuery({
-    queryKey: ["datasets"],
-    queryFn: () => api.listDatasets(),
-  });
-
-  const deleteMutation = useMutation({
-    mutationFn: (id: string) => api.deleteDataset(id),
-    onSuccess: (_, deletedId) => {
-      queryClient.invalidateQueries({ queryKey: ["datasets"] });
-      if (activeDataset?.id === deletedId) {
-        setActiveDataset(null);
-        setActiveConversationId(null);
+  // Helper to poll for dataset processing status
+  const pollDatasetStatus = useCallback(async (datasetId: string, filename: string) => {
+    let polling = true;
+    while (polling) {
+      try {
+        const statusData = await api.getDatasetStatus(datasetId);
+        if (statusData.status === "ready") {
+          polling = false;
+          setFileState((prev) => prev ? { ...prev, status: "success" } : null);
+          setActiveConversationId(null);
+          queryClient.invalidateQueries({ queryKey: ["datasets"] });
+          
+          const datasetDetails = {
+            id: datasetId,
+            dataset_id: datasetId,
+            filename: filename,
+            rows: statusData.rows || 0,
+            columns: statusData.columns || 0,
+            column_names: statusData.column_names || [],
+          };
+          
+          setActiveDataset(datasetDetails);
+          toast.success(`Dataset ready: ${statusData.rows?.toLocaleString()} rows × ${statusData.columns} columns`);
+          onUploadSuccess?.(datasetDetails);
+        } else if (statusData.status === "error") {
+          polling = false;
+          setFileState((prev) => prev ? { ...prev, status: "error", error: statusData.error_message } : null);
+          toast.error(`Processing failed: ${statusData.error_message}`);
+        } else {
+          // Still processing, wait 2 seconds
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      } catch (err: any) {
+        polling = false;
+        setFileState((prev) => prev ? { ...prev, status: "error", error: err.message } : null);
+        toast.error(`Failed to get status: ${err.message}`);
       }
-      toast.success("Dataset deleted successfully");
-    },
-    onError: (err: Error) => {
-      toast.error(`Failed to delete: ${err.message}`);
     }
-  });
+  }, [setActiveConversationId, queryClient, setActiveDataset, onUploadSuccess]);
 
-  const uploadMutation = useMutation({
-    mutationFn: (file: File) => api.uploadFile(file),
-    onSuccess: (data) => {
-      setFileState((prev) => prev ? { ...prev, status: "success", progress: 100 } : null);
-      setActiveConversationId(null);
-      queryClient.invalidateQueries({ queryKey: ["datasets"] });
-      setActiveDataset({
-        id: data.dataset_id,
-        filename: data.filename,
-        rows: data.rows,
-        columns: data.columns,
-        column_names: data.column_names,
-      });
-      toast.success(`Dataset loaded: ${data.rows.toLocaleString()} rows × ${data.columns} columns`);
-      onUploadSuccess?.(data);
-    },
-    onError: (err: Error) => {
-      setFileState((prev) => prev ? { ...prev, status: "error", error: err.message } : null);
-      toast.error(`Upload failed: ${err.message}`);
-    },
-  });
 
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
 
+    if (!auth.currentUser) {
+      toast.error("You must be logged in to upload files.");
+      return;
+    }
+
     setFileState({ file, status: "uploading", progress: 0 });
 
-    // Simulate progress while uploading
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 15;
-      if (progress > 90) { clearInterval(interval); progress = 90; }
-      setFileState((prev) => prev ? { ...prev, progress } : null);
-    }, 200);
-
-    uploadMutation.mutate(file, {
-      onSettled: () => clearInterval(interval),
-    });
-  }, [uploadMutation]);
+    try {
+      const datasetId = crypto.randomUUID();
+      const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+      const safeName = `${datasetId}${ext}`;
+      const storagePath = `users/${auth.currentUser.uid}/datasets/${datasetId}/${safeName}`;
+      
+      const storage = getStorage();
+      const storageRef = ref(storage, storagePath);
+      
+      const uploadTask = uploadBytesResumable(storageRef, file);
+      
+      uploadTask.on(
+        "state_changed",
+        (snapshot) => {
+          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+          setFileState((prev) => prev ? { ...prev, progress } : null);
+        },
+        (error) => {
+          setFileState((prev) => prev ? { ...prev, status: "error", error: error.message } : null);
+          toast.error(`Upload failed: ${error.message}`);
+        },
+        async () => {
+          // Upload complete! Notify backend
+          setFileState((prev) => prev ? { ...prev, status: "processing", datasetId } : null);
+          try {
+            await api.processDataset(datasetId, file.name, storagePath, file.size);
+            // Start polling for processing completion
+            pollDatasetStatus(datasetId, file.name);
+          } catch (err: any) {
+            setFileState((prev) => prev ? { ...prev, status: "error", error: err.message } : null);
+            toast.error(`Failed to initiate processing: ${err.message}`);
+          }
+        }
+      );
+    } catch (err: any) {
+      setFileState((prev) => prev ? { ...prev, status: "error", error: err.message } : null);
+      toast.error(`Failed to start upload: ${err.message}`);
+    }
+  }, [pollDatasetStatus]);
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     onDrop,
@@ -98,14 +132,13 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
       "application/json": [".json"],
       "application/octet-stream": [".parquet"],
     },
-    maxSize: 100 * 1024 * 1024,
+    maxSize: 1024 * 1024 * 1024, // 1GB
     multiple: false,
-    disabled: uploadMutation.isPending,
+    disabled: fileState?.status === "uploading" || fileState?.status === "processing",
   });
 
   const reset = () => {
     setFileState(null);
-    uploadMutation.reset();
   };
 
   return (
@@ -145,7 +178,7 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
                   ))}
                 </div>
                 <p className="text-xs mt-4" style={{ color: "var(--text-muted)" }}>
-                  Max file size: 100MB
+                  Fast direct-to-cloud upload up to 1GB
                 </p>
               </motion.div>
             </div>
@@ -169,7 +202,7 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
                   <p className="font-medium truncate text-sm" style={{ color: "var(--text-primary)" }}>
                     {fileState.file.name}
                   </p>
-                  {fileState.status !== "uploading" && (
+                  {fileState.status !== "uploading" && fileState.status !== "processing" && (
                     <button onClick={reset} className="btn-ghost p-1 ml-2 flex-shrink-0">
                       <X className="w-4 h-4" />
                     </button>
@@ -191,7 +224,27 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
                       />
                     </div>
                     <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                      Uploading... {Math.round(fileState.progress)}%
+                      Uploading to cloud... {Math.round(fileState.progress)}%
+                    </p>
+                  </div>
+                )}
+                
+                {fileState.status === "processing" && (
+                  <div>
+                    <div className="progress-bar mb-1">
+                      <motion.div
+                        className="progress-fill"
+                        initial={{ width: "100%" }}
+                        animate={{ backgroundPosition: ["0% 0%", "100% 0%"] }}
+                        transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                        style={{
+                          backgroundSize: "200% 100%",
+                          backgroundImage: "linear-gradient(90deg, var(--accent) 0%, rgba(255,255,255,0.4) 50%, var(--accent) 100%)"
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                      Analyzing dataset with Pandas...
                     </p>
                   </div>
                 )}
@@ -200,7 +253,7 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
                   <div className="flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4" style={{ color: "var(--success)" }} />
                     <span className="text-xs" style={{ color: "var(--success)" }}>
-                      Upload successful — dataset ready for analysis
+                      Dataset successfully parsed and ready for analysis!
                     </span>
                   </div>
                 )}
@@ -215,14 +268,13 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
                 )}
               </div>
 
-              {fileState.status === "uploading" && (
+              {(fileState.status === "uploading" || fileState.status === "processing") && (
                 <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" style={{ color: "var(--accent)" }} />
               )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }
