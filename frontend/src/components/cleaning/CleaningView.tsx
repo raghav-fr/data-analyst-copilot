@@ -36,7 +36,7 @@ const OPERATIONS = [
 ];
 
 export default function CleaningView() {
-  const { activeDataset } = useAppStore();
+  const { activeDataset, activeTab } = useAppStore();
   const [selectedOp, setSelectedOp] = useState(OPERATIONS[0]);
   const [params, setParams] = useState<Record<string, string>>({ strategy: "mean", method: "minmax" });
   const [history, setHistory] = useState<string[]>([]);

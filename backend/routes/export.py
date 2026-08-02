@@ -17,7 +17,7 @@ OUTPUT_DIR = os.getenv("OUTPUT_DIR", "outputs")
 
 
 @router.post("/")
-async def export_dataset(request: ExportRequest):
+async def export_dataset(request: ExportRequest, current_user = Depends(get_current_user)):
     """Export dataset in the requested format."""
     df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:

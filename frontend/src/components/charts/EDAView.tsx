@@ -144,7 +144,7 @@ function ChartCard({ chart, index }: ChartCardProps) {
 }
 
 export default function EDAView() {
-  const { activeDataset } = useAppStore();
+  const { activeDataset, activeTab } = useAppStore();
   const [filter, setFilter] = useState<string>("all");
 
   const { data: edaData, isLoading, error, refetch } = useQuery({

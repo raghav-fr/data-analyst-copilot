@@ -132,7 +132,7 @@ function ColumnCard({ col }: { col: ColumnProfile }) {
 }
 
 export default function DatasetProfileView() {
-  const { activeDataset } = useAppStore();
+  const { activeDataset, activeTab } = useAppStore();
 
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ["profile", activeDataset?.id],

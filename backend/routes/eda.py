@@ -49,15 +49,11 @@ async def run_eda(
     for col in numeric_cols:
         try:
             b64 = generate_histogram(df, col)
-            insight = None
-            if include_insights:
-                insight = await _get_chart_insight(df, col, "histogram", meta.get("filename", ""))
             charts.append(EDAChart(
                 chart_type="histogram",
                 title=f"Distribution: {col}",
                 column=col,
                 image_url=f"data:image/png;base64,{b64}",
-                insight=insight,
             ))
         except Exception as e:
             logger.warning(f"Histogram error for {col}: {e}")
@@ -94,15 +90,11 @@ async def run_eda(
         if df[col].nunique() <= 30:  # Only reasonable cardinality
             try:
                 b64 = generate_countplot(df, col)
-                insight = None
-                if include_insights:
-                    insight = await _get_chart_insight(df, col, "countplot", meta.get("filename", ""))
                 charts.append(EDAChart(
                     chart_type="countplot",
                     title=f"Category Distribution: {col}",
                     column=col,
                     image_url=f"data:image/png;base64,{b64}",
-                    insight=insight,
                 ))
             except Exception as e:
                 logger.warning(f"Countplot error for {col}: {e}")
