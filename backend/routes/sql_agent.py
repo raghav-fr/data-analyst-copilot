@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.post("/query", response_model=SQLResponse)
-async def run_sql_query(request: SQLRequest):
+async def run_sql_query(request: SQLRequest, current_user = Depends(get_current_user)):
     """Execute SQL query against the dataset using DuckDB."""
     df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:
@@ -92,7 +92,7 @@ Respond ONLY with a JSON object:
         sql = data.get("sql", "")
 
         # Execute the generated SQL
-        result = await run_sql_query(SQLRequest(dataset_id=dataset_id, query=sql))
+        result = await run_sql_query(SQLRequest(dataset_id=dataset_id, query=sql), current_user=current_user)
         return {
             "question": question,
             "sql": sql,

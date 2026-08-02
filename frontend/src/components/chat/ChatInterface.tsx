@@ -30,7 +30,7 @@ interface SuggestedQuestion {
 }
 
 export default function ChatInterface() {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messagesCache, setMessagesCache] = useState<Record<string, Message[]>>({});
   const [input, setInput] = useState("");
   const [showCode, setShowCode] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
@@ -38,6 +38,18 @@ export default function ChatInterface() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const { activeDataset, activeConversationId, setActiveConversationId, selectedModel } = useAppStore();
+
+  const currentDatasetId = activeDataset?.id || "";
+  const messages = messagesCache[currentDatasetId] || [];
+
+  const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
+    if (!currentDatasetId) return;
+    setMessagesCache((prev) => {
+      const prevMsgs = prev[currentDatasetId] || [];
+      const newMsgs = typeof updater === "function" ? updater(prevMsgs) : updater;
+      return { ...prev, [currentDatasetId]: newMsgs };
+    });
+  };
 
   // Load conversation for active dataset
   useEffect(() => {
@@ -47,22 +59,25 @@ export default function ChatInterface() {
           setActiveConversationId(convs[0].id);
         } else {
           setActiveConversationId(null);
-          setMessages([]);
+          // Only clear if we don't have a cache for it
+          if (!messagesCache[activeDataset.id]) {
+            setMessages([]);
+          }
         }
       }).catch(err => {
         console.error("Failed to load conversations", err);
-        setActiveConversationId(null);
-        setMessages([]);
       });
-    } else {
-      setMessages([]);
     }
   }, [activeDataset?.id, setActiveConversationId]);
 
   // Load chat history for active conversation
   useEffect(() => {
-    if (activeConversationId) {
-      setIsLoadingHistory(true);
+    if (activeConversationId && currentDatasetId) {
+      // Don't show loading spinner if we already have cached messages
+      if (!messagesCache[currentDatasetId] || messagesCache[currentDatasetId].length === 0) {
+        setIsLoadingHistory(true);
+      }
+      
       api.getChatHistory(activeConversationId).then((history: any[]) => {
         const formattedHistory: Message[] = history.map((msg: any) => ({
           id: msg.id,
@@ -74,17 +89,23 @@ export default function ChatInterface() {
           intent: msg.result_data?.intent || undefined,
           timestamp: new Date(msg.created_at),
         }));
-        setMessages(formattedHistory);
+        
+        // Only update if it brings new data or we were empty, to avoid UI flicker
+        setMessagesCache(prev => {
+           const existing = prev[currentDatasetId] || [];
+           // If the fetched history has more messages, update it
+           if (formattedHistory.length >= existing.length) {
+              return { ...prev, [currentDatasetId]: formattedHistory };
+           }
+           return prev;
+        });
       }).catch(err => {
         console.error("Failed to load chat history", err);
-        toast.error("Failed to load chat history");
       }).finally(() => {
         setIsLoadingHistory(false);
       });
-    } else if (activeDataset) {
-      setMessages([]);
     }
-  }, [activeConversationId, activeDataset]);
+  }, [activeConversationId, currentDatasetId]);
 
   // Load suggestions
   const { data: suggestionsData } = useQuery({
