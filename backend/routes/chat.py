@@ -310,3 +310,47 @@ async def get_history(
             "created_at": created_at,
         })
     return msgs
+
+
+@router.get("/history/by_dataset/{dataset_id}")
+async def get_history_by_dataset(
+    dataset_id: str, 
+    current_user = Depends(get_current_user),
+):
+    """Get full message history for the most recent conversation of a dataset in a single call."""
+    db = firestore.client()
+    convs_ref = db.collection('users').document(current_user.uid).collection('conversations')
+    query = convs_ref.where('dataset_id', '==', dataset_id).order_by('updated_at', direction=firestore.Query.DESCENDING).limit(1)
+    docs = query.stream()
+    
+    conv_id = None
+    for doc in docs:
+        conv_id = doc.id
+        break
+        
+    if not conv_id:
+        return {"conversation_id": None, "messages": []}
+        
+    messages_ref = db.collection('users').document(current_user.uid).collection('conversations').document(conv_id).collection('messages')
+    query = messages_ref.order_by('created_at', direction=firestore.Query.ASCENDING)
+    docs = query.stream()
+    
+    msgs = []
+    for doc in docs:
+        m = doc.to_dict()
+        created_at = m.get('created_at')
+        if created_at:
+            created_at = created_at.isoformat()
+        else:
+            created_at = ""
+            
+        msgs.append({
+            "id": m.get("id"),
+            "role": m.get("role"),
+            "content": m.get("content"),
+            "code": m.get("code"),
+            "chart_path": m.get("chart_path"),
+            "result_data": m.get("result_data"),
+            "created_at": created_at,
+        })
+    return {"conversation_id": conv_id, "messages": msgs}

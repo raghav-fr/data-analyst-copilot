@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { BarChart3, Loader2, ChevronDown, ChevronUp, Lightbulb, AlertCircle } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api } from "@/lib/api";
@@ -144,15 +144,30 @@ function ChartCard({ chart, index }: ChartCardProps) {
 }
 
 export default function EDAView() {
-  const { activeDataset, activeTab } = useAppStore();
+  const { activeDataset, activeTab, user, authLoading } = useAppStore();
   const [filter, setFilter] = useState<string>("all");
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: edaData, isLoading, error, refetch } = useQuery({
     queryKey: ["eda", activeDataset?.id],
     queryFn: () => api.runEDA(activeDataset!.id, true),
-    enabled: !!activeDataset?.id,
+    enabled: !!activeDataset?.id && !!user && !authLoading,
     staleTime: 5 * 60 * 1000,
   });
+
+  const handleRefresh = async () => {
+    if (!activeDataset) return;
+    setIsRefreshing(true);
+    try {
+      const freshData = await api.runEDA(activeDataset.id, true, true);
+      queryClient.setQueryData(["eda", activeDataset.id], freshData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   if (!activeDataset) {
     return (
@@ -180,8 +195,8 @@ export default function EDAView() {
           )}
         </div>
         {!isLoading && (
-          <button onClick={() => refetch()} className="btn-ghost text-xs px-3 py-1.5">
-            Refresh
+          <button onClick={handleRefresh} disabled={isRefreshing} className="btn-ghost text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-50">
+            {isRefreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Refresh Insights"}
           </button>
         )}
       </div>

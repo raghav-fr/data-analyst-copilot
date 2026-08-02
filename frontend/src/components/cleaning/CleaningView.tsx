@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Wand2, CheckCircle2, Loader2 } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useAppStore } from "@/lib/store";
 import { toast } from "sonner";
@@ -36,18 +36,34 @@ const OPERATIONS = [
 ];
 
 export default function CleaningView() {
-  const { activeDataset, activeTab } = useAppStore();
+  const { activeDataset, user, authLoading } = useAppStore();
   const [selectedOp, setSelectedOp] = useState(OPERATIONS[0]);
   const [params, setParams] = useState<Record<string, string>>({ strategy: "mean", method: "minmax" });
   const [history, setHistory] = useState<string[]>([]);
 
+  const queryClient = useQueryClient();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const { data: suggestionsRaw } = useQuery({
     queryKey: ["cleaning-suggestions", activeDataset?.id],
     queryFn: () => api.getCleaningSuggestions(activeDataset!.id),
-    enabled: !!activeDataset?.id,
+    enabled: !!activeDataset?.id && !!user && !authLoading,
   });
 
   const suggestions = suggestionsRaw as SuggestionsData | undefined;
+
+  const handleRefresh = async () => {
+    if (!activeDataset) return;
+    setIsRefreshing(true);
+    try {
+      const freshData = await api.getCleaningSuggestions(activeDataset.id, true);
+      queryClient.setQueryData(["cleaning-suggestions", activeDataset.id], freshData);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   const cleanMutation = useMutation({
     mutationFn: () =>
@@ -81,9 +97,19 @@ export default function CleaningView() {
         {/* AI Suggestions */}
         {suggestions && suggestions.suggestions && suggestions.suggestions.length > 0 && (
           <div className="glass-card p-4 rounded-xl border" style={{ borderColor: "var(--border)" }}>
-            <div className="flex items-center gap-2 mb-3">
-              <span>🤖</span>
-              <span className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>AI Recommendations</span>
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span>🤖</span>
+                <span className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>AI Recommendations</span>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={isRefreshing}
+                className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity disabled:opacity-40"
+                style={{ color: "var(--accent)" }}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isRefreshing ? "animate-spin" : ""}><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+                Refresh
+              </button>
             </div>
             <div className="space-y-2">
               {suggestions.suggestions.slice(0, 3).map((s, i) => (

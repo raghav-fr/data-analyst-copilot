@@ -13,8 +13,22 @@ router = APIRouter()
 
 
 @router.get("/{dataset_id}", response_model=SuggestionsResponse)
-async def get_suggested_questions(dataset_id: str, model: str = "gemini", current_user = Depends(get_current_user)):
+async def get_suggested_questions(dataset_id: str, model: str = "gemini", force_refresh: bool = False, current_user = Depends(get_current_user)):
     """Generate AI-powered suggested questions for a dataset."""
+    from firebase_admin import firestore
+    
+    db = firestore.client()
+    doc_ref = db.collection('users').document(current_user.uid).collection('datasets').document(dataset_id)
+    
+    # Check cache first
+    if not force_refresh:
+        doc = doc_ref.get()
+        if doc.exists:
+            cached_suggestions = doc.to_dict().get("chat_suggestions")
+            if cached_suggestions:
+                questions = [SuggestedQuestion(**q) for q in cached_suggestions]
+                return SuggestionsResponse(dataset_id=dataset_id, questions=questions)
+
     df = get_dataframe(dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
@@ -59,6 +73,9 @@ async def get_suggested_questions(dataset_id: str, model: str = "gemini", curren
             for q in questions_data[:12]
             if q.get("question")
         ]
+        
+        # Save to cache
+        doc_ref.set({"chat_suggestions": [q.model_dump() for q in questions]}, merge=True)
 
         return SuggestionsResponse(dataset_id=dataset_id, questions=questions)
 

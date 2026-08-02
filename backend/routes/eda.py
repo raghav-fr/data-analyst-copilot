@@ -22,6 +22,7 @@ async def run_eda(
     dataset_id: str,
     include_insights: bool = True,
     max_charts: int = 20,
+    force_refresh: bool = False,
     current_user = Depends(get_current_user)):
     """Run automatic EDA on a dataset. Returns charts with AI explanations."""
     df = get_dataframe(dataset_id, current_user.uid)
@@ -115,10 +116,22 @@ async def run_eda(
     # Summary insight
     summary = None
     if include_insights:
-        try:
-            summary = await _get_eda_summary(df, df_info, meta.get("filename", ""))
-        except Exception as e:
-            logger.warning(f"EDA summary error: {e}")
+        from firebase_admin import firestore
+        db = firestore.client()
+        doc_ref = db.collection('users').document(current_user.uid).collection('datasets').document(dataset_id)
+        
+        if not force_refresh:
+            doc = doc_ref.get()
+            if doc.exists:
+                summary = doc.to_dict().get("eda_summary_insight")
+                
+        if not summary:
+            try:
+                summary = await _get_eda_summary(df, df_info, meta.get("filename", ""))
+                if summary:
+                    doc_ref.set({"eda_summary_insight": summary}, merge=True)
+            except Exception as e:
+                logger.warning(f"EDA summary error: {e}")
 
     return EDAResponse(
         dataset_id=dataset_id,

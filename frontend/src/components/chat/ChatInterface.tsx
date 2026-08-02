@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, Sparkles, Code2, BarChart2, Bot, User, Clock, Copy, Check } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { api, ChatMessage as ChatMsg } from "@/lib/api";
@@ -34,13 +34,14 @@ export default function ChatInterface() {
   const [input, setInput] = useState("");
   const [showCode, setShowCode] = useState<Record<string, boolean>>({});
   const [copied, setCopied] = useState<string | null>(null);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState<Record<string, boolean>>({});
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const { activeDataset, activeConversationId, setActiveConversationId, selectedModel } = useAppStore();
+  const { activeDataset, activeConversationId, setActiveConversationId, selectedModel, user, authLoading } = useAppStore();
 
   const currentDatasetId = activeDataset?.id || "";
   const messages = messagesCache[currentDatasetId] || [];
+  const isHistoryLoaded = historyLoaded[currentDatasetId] || false;
 
   const setMessages = (updater: Message[] | ((prev: Message[]) => Message[])) => {
     if (!currentDatasetId) return;
@@ -51,34 +52,11 @@ export default function ChatInterface() {
     });
   };
 
-  // Load conversation for active dataset
+  // Load chat history for active dataset
   useEffect(() => {
-    if (activeDataset?.id) {
-      api.getConversations(activeDataset.id).then((convs: any[]) => {
-        if (convs && convs.length > 0) {
-          setActiveConversationId(convs[0].id);
-        } else {
-          setActiveConversationId(null);
-          // Only clear if we don't have a cache for it
-          if (!messagesCache[activeDataset.id]) {
-            setMessages([]);
-          }
-        }
-      }).catch(err => {
-        console.error("Failed to load conversations", err);
-      });
-    }
-  }, [activeDataset?.id, setActiveConversationId]);
-
-  // Load chat history for active conversation
-  useEffect(() => {
-    if (activeConversationId && currentDatasetId) {
-      // Don't show loading spinner if we already have cached messages
-      if (!messagesCache[currentDatasetId] || messagesCache[currentDatasetId].length === 0) {
-        setIsLoadingHistory(true);
-      }
-      
-      api.getChatHistory(activeConversationId).then((history: any[]) => {
+    if (activeDataset?.id && user && !authLoading) {
+      api.getLatestChatHistory(activeDataset.id).then((data: any) => {
+        const history = data.messages || [];
         const formattedHistory: Message[] = history.map((msg: any) => ({
           id: msg.id,
           role: msg.role as "user" | "assistant",
@@ -90,29 +68,50 @@ export default function ChatInterface() {
           timestamp: new Date(msg.created_at),
         }));
         
+        if (data.conversation_id) {
+          setActiveConversationId(data.conversation_id);
+        } else {
+          setActiveConversationId(null);
+        }
+
         // Only update if it brings new data or we were empty, to avoid UI flicker
         setMessagesCache(prev => {
-           const existing = prev[currentDatasetId] || [];
-           // If the fetched history has more messages, update it
-           if (formattedHistory.length >= existing.length) {
-              return { ...prev, [currentDatasetId]: formattedHistory };
+           const existing = prev[activeDataset.id] || [];
+           if (formattedHistory.length >= existing.length || existing.length === 0) {
+              return { ...prev, [activeDataset.id]: formattedHistory };
            }
            return prev;
         });
       }).catch(err => {
-        console.error("Failed to load chat history", err);
+        console.error("Failed to load latest chat history", err);
       }).finally(() => {
-        setIsLoadingHistory(false);
+        setHistoryLoaded(prev => ({ ...prev, [activeDataset.id]: true }));
       });
     }
-  }, [activeConversationId, currentDatasetId]);
+  }, [activeDataset?.id, setActiveConversationId, user, authLoading]);
 
   // Load suggestions
+  const queryClient = useQueryClient();
+  const [isRefreshingSuggestions, setIsRefreshingSuggestions] = useState(false);
   const { data: suggestionsData } = useQuery({
     queryKey: ["suggestions", activeDataset?.id],
     queryFn: () => api.getSuggestions(activeDataset!.id, selectedModel),
-    enabled: !!activeDataset?.id && messages.length === 0,
+    enabled: !!activeDataset?.id && messages.length === 0 && !!user,
   });
+
+  const handleRefreshSuggestions = async () => {
+    if (!activeDataset) return;
+    setIsRefreshingSuggestions(true);
+    try {
+      const freshData = await api.getSuggestions(activeDataset.id, selectedModel, true);
+      queryClient.setQueryData(["suggestions", activeDataset.id], freshData);
+      toast.success("Suggestions refreshed!");
+    } catch (err) {
+      toast.error("Failed to refresh suggestions");
+    } finally {
+      setIsRefreshingSuggestions(false);
+    }
+  };
 
   const chatMutation = useMutation({
     mutationFn: (message: string) =>
@@ -218,7 +217,14 @@ export default function ChatInterface() {
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4">
-        {messages.length === 0 && (
+        {!isHistoryLoaded ? (
+          <div className="flex-1 flex flex-col items-center justify-center h-full min-h-[200px]">
+            <Bot className="w-10 h-10 mb-4 opacity-40 animate-bounce" style={{ color: "var(--accent)" }} />
+            <div className="loading-dots">
+              <span /><span /><span />
+            </div>
+          </div>
+        ) : messages.length === 0 && (
           <div className="animate-fade-in">
             {/* Welcome */}
             <div className="text-center mb-6 pt-4">
@@ -237,9 +243,19 @@ export default function ChatInterface() {
             {/* Suggested questions */}
             {suggestionsData?.questions && suggestionsData.questions.length > 0 && (
               <div>
-                <p className="text-xs font-medium mb-3" style={{ color: "var(--text-muted)" }}>
-                  💡 Suggested questions
-                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+                    💡 Suggested questions
+                  </p>
+                  <button
+                    onClick={handleRefreshSuggestions}
+                    disabled={isRefreshingSuggestions}
+                    className="text-xs flex items-center gap-1 opacity-70 hover:opacity-100 transition-opacity disabled:opacity-40"
+                    style={{ color: "var(--accent)" }}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={isRefreshingSuggestions ? "animate-spin" : ""}><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
+                    Refresh
+                  </button>
+                </div>
                 <div className="grid grid-cols-1 gap-2">
                   {suggestionsData.questions.slice(0, 6).map((q, i) => (
                     <motion.button

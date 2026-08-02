@@ -121,8 +121,21 @@ async def clean_data(request: CleaningRequest):
 
 
 @router.get("/suggestions/{dataset_id}")
-async def get_cleaning_suggestions(dataset_id: str, current_user = Depends(get_current_user)):
+async def get_cleaning_suggestions(dataset_id: str, force_refresh: bool = False, current_user = Depends(get_current_user)):
     """Get AI-powered cleaning recommendations."""
+    from firebase_admin import firestore
+    
+    db = firestore.client()
+    doc_ref = db.collection('users').document(current_user.uid).collection('datasets').document(dataset_id)
+    
+    # Check cache first
+    if not force_refresh:
+        doc = doc_ref.get()
+        if doc.exists:
+            cached_suggestions = doc.to_dict().get("cleaning_suggestions")
+            if cached_suggestions:
+                return {"dataset_id": dataset_id, "suggestions": cached_suggestions}
+
     df = get_dataframe(dataset_id, current_user.uid)
     if df is None:
         raise HTTPException(status_code=404, detail="Dataset not found")
@@ -155,6 +168,10 @@ async def get_cleaning_suggestions(dataset_id: str, current_user = Depends(get_c
         response = await call_ai(prompt, temperature=0.3)
         from services.ai_service import extract_json
         suggestions = extract_json(response)
+        
+        # Save to cache
+        doc_ref.set({"cleaning_suggestions": suggestions}, merge=True)
+        
         return {"dataset_id": dataset_id, "suggestions": suggestions}
     except Exception as e:
         logger.warning(f"Could not get cleaning suggestions: {e}")
