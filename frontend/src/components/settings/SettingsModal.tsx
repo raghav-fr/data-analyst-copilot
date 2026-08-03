@@ -1,19 +1,49 @@
 "use client";
 
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Settings, X, Brain, Key, Check, Loader2, Wifi, WifiOff, ChevronRight
+  Settings, X, Wifi, WifiOff, User, Mail, Shield, Palette, AlertOctagon, Trash2, LogOut
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { api } from "@/lib/api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { useQuery } from "@tanstack/react-query";
+import { auth } from "@/lib/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 export default function SettingsModal() {
-  const { settingsOpen, setSettingsOpen, openRouterApiKey, setOpenRouterApiKey } = useAppStore();
-  const [keyInput, setKeyInput] = useState(openRouterApiKey);
-  const [saving, setSaving] = useState(false);
+  const { settingsOpen, setSettingsOpen, user, setActiveDataset, setActiveConversationId } = useAppStore();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  const clearDataMutation = useMutation({
+    mutationFn: () => api.deleteUserDatasets(),
+    onSuccess: () => {
+      toast.success("All datasets have been cleared.");
+      setActiveDataset(null);
+      setActiveConversationId(null);
+      queryClient.invalidateQueries({ queryKey: ["datasets"] });
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to clear data: ${err.message}`);
+    }
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => api.deleteUserAccount(),
+    onSuccess: async () => {
+      toast.success("Account deleted successfully.");
+      setSettingsOpen(false);
+      setActiveDataset(null);
+      setActiveConversationId(null);
+      await signOut(auth);
+      router.push("/login");
+    },
+    onError: (err: Error) => {
+      toast.error(`Failed to delete account: ${err.message}`);
+    }
+  });
 
   const { data: health } = useQuery({
     queryKey: ["health"],
@@ -21,14 +51,6 @@ export default function SettingsModal() {
     retry: false,
     refetchInterval: 30000,
   });
-
-  const handleSave = async () => {
-    setSaving(true);
-    setOpenRouterApiKey(keyInput);
-    await new Promise(r => setTimeout(r, 500));
-    setSaving(false);
-    toast.success("API key saved — AI features are now active!");
-  };
 
   if (!settingsOpen) return null;
 
@@ -53,7 +75,7 @@ export default function SettingsModal() {
             style={{ borderColor: "var(--border)" }}>
             <div className="flex items-center gap-2">
               <Settings className="w-5 h-5" style={{ color: "var(--accent)" }} />
-              <span className="font-semibold" style={{ color: "var(--text-primary)" }}>Settings</span>
+              <span className="font-semibold" style={{ color: "var(--text-primary)" }}>Settings & Profile</span>
             </div>
             <button onClick={() => setSettingsOpen(false)} className="btn-ghost p-1">
               <X className="w-4 h-4" />
@@ -61,6 +83,87 @@ export default function SettingsModal() {
           </div>
 
           <div className="p-6 space-y-6">
+            
+            {/* Profile Section */}
+            <div>
+              <label className="text-xs font-medium uppercase tracking-wide mb-3 block flex items-center gap-2"
+                style={{ color: "var(--text-muted)" }}>
+                <User className="w-4 h-4" /> User Profile
+              </label>
+              <div className="glass-card p-4 rounded-xl space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: "var(--accent)", color: "#fff" }}>
+                    {user?.email?.charAt(0).toUpperCase() || <User className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <p className="font-medium text-sm" style={{ color: "var(--text-primary)" }}>
+                      {user?.displayName || "Data Analyst User"}
+                    </p>
+                    <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color: "var(--text-secondary)" }}>
+                      <Mail className="w-3 h-3" /> {user?.email || "Not signed in"}
+                    </p>
+                  </div>
+                </div>
+                {user?.uid && (
+                  <div className="pt-3 border-t mt-3 flex items-center gap-2 text-xs" style={{ borderColor: "var(--border)", color: "var(--text-muted)" }}>
+                    <Shield className="w-3 h-3" /> Account ID: <code className="bg-black/10 px-1 py-0.5 rounded">{user.uid}</code>
+                  </div>
+                )}
+              </div>
+            </div>
+
+
+
+            {/* Danger Zone */}
+            <div>
+              <label className="text-xs font-medium uppercase tracking-wide mb-3 block flex items-center gap-2"
+                style={{ color: "var(--danger)" }}>
+                <AlertOctagon className="w-4 h-4" /> Danger Zone
+              </label>
+              <div className="glass-card rounded-xl overflow-hidden divide-y" style={{ borderColor: "var(--danger)", border: "1px solid var(--danger)" }}>
+                
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
+                  <div>
+                    <p className="text-sm font-medium" style={{ color: "var(--text-primary)" }}>Clear All Data</p>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>Deletes all your uploaded datasets and chat history.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (window.confirm("Are you sure you want to clear all your datasets? This action cannot be undone.")) {
+                        clearDataMutation.mutate();
+                      }
+                    }}
+                    disabled={clearDataMutation.isPending || deleteAccountMutation.isPending}
+                    className="btn-ghost flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border flex-shrink-0"
+                    style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {clearDataMutation.isPending ? "Clearing..." : "Clear Data"}
+                  </button>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-red-500">Delete Account</p>
+                    <p className="text-xs" style={{ color: "var(--text-muted)" }}>Permanently destroys your account and all associated data.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      if (window.confirm("WARNING: This will permanently delete your account and all data. This action is irreversible. Continue?")) {
+                        deleteAccountMutation.mutate();
+                      }
+                    }}
+                    disabled={clearDataMutation.isPending || deleteAccountMutation.isPending}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border flex-shrink-0 bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors"
+                    style={{ borderColor: "rgba(239, 68, 68, 0.2)" }}>
+                    <LogOut className="w-3.5 h-3.5" />
+                    {deleteAccountMutation.isPending ? "Deleting..." : "Delete Account"}
+                  </button>
+                </div>
+
+              </div>
+            </div>
+
             {/* Backend status */}
             <div>
               <label className="text-xs font-medium uppercase tracking-wide mb-3 block"
@@ -82,52 +185,6 @@ export default function SettingsModal() {
               </div>
             </div>
 
-            {/* API Key */}
-            <div>
-              <label className="text-xs font-medium uppercase tracking-wide mb-3 block"
-                style={{ color: "var(--text-muted)" }}>
-                OpenRouter API Key
-              </label>
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="password"
-                    value={keyInput}
-                    onChange={(e) => setKeyInput(e.target.value)}
-                    placeholder="sk-or-v1-..."
-                    className="input-base flex-1 text-sm"
-                  />
-                  <button
-                    onClick={handleSave}
-                    disabled={saving || keyInput === openRouterApiKey}
-                    className="btn-primary flex items-center gap-1.5 flex-shrink-0">
-                    {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                    Save
-                  </button>
-                </div>
-                <p className="text-xs" style={{ color: "var(--text-muted)" }}>
-                  Get your key at{" "}
-                  <a href="https://openrouter.ai/keys" target="_blank" className="underline"
-                    style={{ color: "var(--accent)" }}>
-                    openrouter.ai/keys
-                  </a>
-                </p>
-              </div>
-              {openRouterApiKey && (
-                <div className="flex items-center gap-2 mt-2 text-xs" style={{ color: "var(--success)" }}>
-                  <Check className="w-3 h-3" /> API key configured
-                </div>
-              )}
-            </div>
-
-            {/* Note about backend config */}
-            <div className="p-4 rounded-xl border text-xs"
-              style={{ background: "var(--bg-secondary)", borderColor: "var(--warning)", color: "var(--text-secondary)" }}>
-              <strong style={{ color: "var(--warning)" }}>⚠️ Important:</strong>{" "}
-              Your API key must also be set in <code className="text-xs">backend/.env</code> as{" "}
-              <code className="text-xs" style={{ color: "var(--accent2)" }}>OPENROUTER_API_KEY=...</code>{" "}
-              for the backend to use it.
-            </div>
           </div>
         </motion.div>
       </motion.div>

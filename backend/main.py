@@ -14,7 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
-from routes import upload, profile, eda, chat, statistics, cleaning, export, sql_agent, suggestions
+from routes import upload, profile, eda, chat, statistics, cleaning, export, sql_agent, suggestions, users
 
 # Configure logging
 logging.basicConfig(
@@ -73,6 +73,7 @@ app.include_router(cleaning.router, prefix="/api/cleaning", tags=["Cleaning"])
 app.include_router(export.router, prefix="/api/export", tags=["Export"])
 app.include_router(sql_agent.router, prefix="/api/sql", tags=["SQL Agent"])
 app.include_router(suggestions.router, prefix="/api/suggestions", tags=["Suggestions"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
 
 
 @app.get("/api/health", tags=["Health"])
