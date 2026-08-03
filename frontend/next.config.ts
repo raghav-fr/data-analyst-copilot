@@ -4,9 +4,9 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: "http",
-        hostname: "localhost",
-        port: "8000",
+        protocol: "https",
+        hostname: "data-analyst-copilot.onrender.com",
+        port: "",
       },
     ],
     dangerouslyAllowSVG: true,
@@ -15,11 +15,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        destination: "https://data-analyst-copilot.onrender.com/api/:path*",
       },
       {
         source: "/outputs/:path*",
-        destination: "http://localhost:8000/outputs/:path*",
+        destination: "https://data-analyst-copilot.onrender.com/outputs/:path*",
       },
     ];
   },
