@@ -181,7 +181,7 @@ export default function CleaningView() {
                     value={params[param.key] || ""}
                     onChange={(e) => setParams((p) => ({ ...p, [param.key]: e.target.value }))}
                     className="input-base text-sm w-full">
-                    {param.options?.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+                    {("options" in param ? (param as any).options : [])?.map((opt: string) => <option key={opt} value={opt}>{opt}</option>)}
                   </select>
                 )}
               </div>

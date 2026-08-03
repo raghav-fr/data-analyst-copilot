@@ -45,6 +45,8 @@ interface AppState {
   // Settings
   settingsOpen: boolean;
   setSettingsOpen: (open: boolean) => void;
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -73,6 +75,8 @@ export const useAppStore = create<AppState>()(
 
       settingsOpen: false,
       setSettingsOpen: (open) => set({ settingsOpen: open }),
+      selectedModel: "nemotron",
+      setSelectedModel: (model) => set({ selectedModel: model }),
     }),
     {
       name: 'data-copilot-store',
@@ -81,6 +85,7 @@ export const useAppStore = create<AppState>()(
         activeDataset: state.activeDataset,
         activeConversationId: state.activeConversationId,
         activeTab: state.activeTab,
+        selectedModel: state.selectedModel,
       }),
     }
   )
