@@ -22,6 +22,9 @@ export const metadata: Metadata = {
     description: "AI-powered data analysis platform",
     type: "website",
   },
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

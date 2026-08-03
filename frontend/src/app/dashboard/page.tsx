@@ -92,10 +92,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20"
-                style={{ background: "linear-gradient(135deg, #4f8ef7, #22d3ee)" }}>
-                <Brain className="w-4 h-4 text-white flex-shrink-0" />
-              </div>
+              <img src="/icon.svg" alt="Logo" className="w-10 h-10 object-contain flex-shrink-0" />
               <div className="min-w-0">
                 <p className="font-bold text-sm leading-tight" style={{ color: "var(--text-primary)" }}>
                   Data Analyst

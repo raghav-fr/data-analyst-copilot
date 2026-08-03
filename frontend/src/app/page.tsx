@@ -95,10 +95,7 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="relative z-10 flex items-center justify-between px-8 py-5 max-w-7xl mx-auto">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg flex items-center justify-center"
-            style={{ background: "linear-gradient(135deg, #4f8ef7, #22d3ee)" }}>
-            <Brain className="w-5 h-5 text-white" />
-          </div>
+          <img src="/icon.svg" alt="Logo" className="w-12 h-12 object-contain" />
           <span className="font-bold text-lg" style={{ color: "var(--text-primary)" }}>
             Data Analyst Copilot
           </span>

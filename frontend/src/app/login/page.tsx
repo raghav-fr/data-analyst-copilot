@@ -64,9 +64,7 @@ export default function LoginPage() {
         className="w-full max-w-md p-8 glass-card rounded-2xl shadow-2xl relative z-10"
       >
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-tr from-blue-500 to-cyan-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-500/20">
-            <LogIn className="w-8 h-8 text-white" />
-          </div>
+          <img src="/icon.svg" alt="Logo" className="w-24 h-24 object-contain mx-auto mb-4" />
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[var(--text-primary)] to-[var(--text-secondary)]">
             Welcome Back
           </h1>
@@ -130,7 +128,7 @@ export default function LoginPage() {
         <div className="mt-6 grid grid-cols-2 gap-4">
           <button
             onClick={handleGoogleLogin}
-            className="flex items-center justify-center gap-2 w-full border font-medium py-2.5 px-4 rounded-xl transition-all hover:bg-[var(--bg-hover)]"
+            className="flex items-center justify-center gap-2 w-full border font-medium py-2.5 px-4 rounded-xl transition-all hover:bg-[var(--bg-hover)] cursor-pointer"
             style={{ background: "var(--bg-panel)", borderColor: "var(--border)", color: "var(--text-primary)" }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
@@ -143,7 +141,7 @@ export default function LoginPage() {
           </button>
           <button
             onClick={handleGithubLogin}
-            className="flex items-center justify-center gap-2 w-full border font-medium py-2.5 px-4 rounded-xl transition-all hover:bg-[var(--bg-hover)]"
+            className="flex items-center justify-center gap-2 w-full border font-medium py-2.5 px-4 rounded-xl transition-all hover:bg-[var(--bg-hover)] cursor-pointer"
             style={{ background: "var(--bg-panel)", borderColor: "var(--border)", color: "var(--text-primary)" }}
           >
             <svg className="w-5 h-5" viewBox="0 0 24 24">
