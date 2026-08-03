@@ -40,7 +40,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (v: boolean) => void;
 }) {
-  const { activeDataset, setActiveDataset, setActiveConversationId, setSettingsOpen } = useAppStore();
+  const { user, authLoading, activeDataset, setActiveDataset, setActiveConversationId, setSettingsOpen } = useAppStore();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -48,6 +48,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
     queryKey: ["datasets"],
     queryFn: api.listDatasets.bind(api),
     staleTime: 60000,
+    enabled: !!user && !authLoading,
   });
 
   const deleteMutation = useMutation({

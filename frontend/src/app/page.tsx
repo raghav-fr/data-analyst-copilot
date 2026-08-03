@@ -62,7 +62,7 @@ const features = [
 const stats = [
   { value: "20+", label: "Analysis Phases" },
   { value: "10+", label: "Chart Types" },
-  { value: "6", label: "Export Formats" },
+  { value: "4", label: "Export Formats" },
   { value: "∞", label: "Datasets" },
 ];
 

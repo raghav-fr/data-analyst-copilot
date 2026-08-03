@@ -537,3 +537,8 @@ body {
 .panel-divider:hover {
   background: var(--text-muted);
 }
+
+/* ─── Hide Next.js Dev Overlays ──────────────────────────────────────────────── */
+nextjs-portal, #nextjs-build-indicator, .nextjs-toast {
+  display: none !important;
+}

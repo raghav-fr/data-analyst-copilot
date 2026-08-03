@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  devIndicators: {
+    // If you want to configure dev indicators, you can use the `position` property:
+    // position: "bottom-right"
+  },
 };
 
 export default nextConfig;
