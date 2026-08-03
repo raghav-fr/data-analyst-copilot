@@ -6,10 +6,10 @@ import { Send, Sparkles, Code2, BarChart2, Bot, User, Clock, Copy, Check } from 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { api, ChatMessage as ChatMsg } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
+import { api, ChatMessage as ChatMsg } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
 import { toast } from "sonner";
-import DataTable from "@/components/data/DataTable";
+import DataTable from "../../components/data/DataTable";
 
 interface Message {
   id: string;

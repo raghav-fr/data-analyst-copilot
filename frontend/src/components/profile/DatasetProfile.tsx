@@ -2,11 +2,11 @@
 
 import { motion } from "framer-motion";
 import { AlertCircle, Brain, Database, Hash, Tag, Calendar, TrendingUp, BarChart2 } from "lucide-react";
-import { DatasetProfile, ColumnProfile } from "@/lib/api";
-import { formatNumber, getTypeColor, getTypeIcon } from "@/lib/utils";
+import { DatasetProfile, ColumnProfile } from "../../lib/api";
+import { formatNumber, getTypeColor, getTypeIcon } from "../../lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
+import { api } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
 
 function StatCard({ label, value, sublabel, color }: {
   label: string; value: string | number; sublabel?: string; color?: string;

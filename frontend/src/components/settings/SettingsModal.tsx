@@ -4,11 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Settings, X, Wifi, WifiOff, User, Mail, Shield, Palette, AlertOctagon, Trash2, LogOut
 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
-import { api } from "@/lib/api";
+import { useAppStore } from "../../lib/store";
+import { api } from "../../lib/api";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { auth } from "@/lib/firebase";
+import { auth } from "../../lib/firebase";
 import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 

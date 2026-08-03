@@ -8,21 +8,21 @@ import {
   FileText, Cpu, Hash, Tag, TrendingUp, AlertCircle,
   Sparkles, Home, RefreshCw, Trash2, LogOut, Loader2
 } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth } from "../../lib/firebase";
 import { signOut } from "firebase/auth";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { useAppStore } from "@/lib/store";
-import { api } from "@/lib/api";
-import { formatBytes, formatNumber } from "@/lib/utils";
-import FileUpload from "@/components/upload/FileUpload";
-import ChatInterface from "@/components/chat/ChatInterface";
-import DatasetProfileView from "@/components/profile/DatasetProfile";
-import EDAView from "@/components/charts/EDAView";
-import SQLView from "@/components/sql/SQLView";
-import CleaningView from "@/components/cleaning/CleaningView";
-import ExportView from "@/components/export/ExportView";
-import SettingsModal from "@/components/settings/SettingsModal";
+import { useAppStore } from "../../lib/store";
+import { api } from "../../lib/api";
+import { formatBytes, formatNumber } from "../../lib/utils";
+import FileUpload from "../../components/upload/FileUpload";
+import ChatInterface from "../../components/chat/ChatInterface";
+import DatasetProfileView from "../../components/profile/DatasetProfile";
+import EDAView from "../../components/charts/EDAView";
+import SQLView from "../../components/sql/SQLView";
+import CleaningView from "../../components/cleaning/CleaningView";
+import ExportView from "../../components/export/ExportView";
+import SettingsModal from "../../components/settings/SettingsModal";
 import { toast } from "sonner";
 
 type TabId = "chat" | "profile" | "eda" | "sql" | "cleaning" | "export";

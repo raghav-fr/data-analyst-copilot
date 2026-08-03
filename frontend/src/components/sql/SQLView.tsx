@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Database, Play, Loader2, AlertCircle, Clock, Rows } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
+import { api } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
 import { toast } from "sonner";
-import DataTable from "@/components/data/DataTable";
+import DataTable from "../../components/data/DataTable";
 
 const EXAMPLE_QUERIES = [
   "SELECT * FROM data LIMIT 10",

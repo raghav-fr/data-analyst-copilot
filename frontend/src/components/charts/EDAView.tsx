@@ -6,8 +6,8 @@ import { BarChart3, Loader2, ChevronDown, ChevronUp, Lightbulb, AlertCircle } fr
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { api } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
+import { api } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
 
 interface ChartCardProps {
   chart: {

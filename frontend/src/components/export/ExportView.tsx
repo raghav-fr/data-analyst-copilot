@@ -3,8 +3,8 @@
 import { motion } from "framer-motion";
 import { Download, FileText, Table2, FileJson, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
+import { api } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
 import { toast } from "sonner";
 
 const EXPORT_OPTIONS = [

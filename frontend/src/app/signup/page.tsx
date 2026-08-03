@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { createUserWithEmailAndPassword, GoogleAuthProvider, GithubAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth } from "../../lib/firebase";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, Mail, Lock, UserPlus } from "lucide-react";

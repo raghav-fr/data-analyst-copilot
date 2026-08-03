@@ -3,9 +3,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Table2, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { api } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
-import { getTypeColor, getTypeIcon } from "@/lib/utils";
+import { api } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
+import { getTypeColor, getTypeIcon } from "../../lib/utils";
 
 export default function DataPreviewTable() {
   const { activeDataset } = useAppStore();

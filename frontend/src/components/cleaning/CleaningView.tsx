@@ -4,8 +4,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wand2, CheckCircle2, Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
+import { api } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
 import { toast } from "sonner";
 
 interface Suggestion {

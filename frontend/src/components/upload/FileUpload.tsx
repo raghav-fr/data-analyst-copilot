@@ -5,11 +5,11 @@ import { useDropzone } from "react-dropzone";
 import { motion, AnimatePresence } from "framer-motion";
 import { Upload, FileText, X, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, Dataset } from "@/lib/api";
-import { useAppStore } from "@/lib/store";
-import { formatBytes } from "@/lib/utils";
+import { api, Dataset } from "../../lib/api";
+import { useAppStore } from "../../lib/store";
+import { formatBytes } from "../../lib/utils";
 import { toast } from "sonner";
-import { auth } from "@/lib/firebase";
+import { auth } from "../../lib/firebase";
 import { getStorage, ref, uploadBytesResumable } from "firebase/storage";
 
 interface FileUploadProps {
