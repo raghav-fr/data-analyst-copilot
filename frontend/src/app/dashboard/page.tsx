@@ -6,7 +6,7 @@ import {
   Brain, Upload, MessageSquare, BarChart3, Database, Wand2,
   Download, Settings, Menu, X, ChevronLeft, ChevronRight,
   FileText, Cpu, Hash, Tag, TrendingUp, AlertCircle,
-  Sparkles, Home, RefreshCw, Trash2, LogOut
+  Sparkles, Home, RefreshCw, Trash2, LogOut, Loader2
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
@@ -47,6 +47,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
   const { data: datasets, refetch } = useQuery({
     queryKey: ["datasets"],
     queryFn: api.listDatasets.bind(api),
+    staleTime: 60000,
   });
 
   const deleteMutation = useMutation({
@@ -210,7 +211,11 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
                   className="btn-ghost p-1.5 flex-shrink-0 hover:bg-red-500/10 hover:text-red-500"
                   title="Delete dataset"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  {deleteMutation.isPending && deleteMutation.variables === ds.id ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="w-3.5 h-3.5" />
+                  )}
                 </button>
               </div>
             ))}

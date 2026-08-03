@@ -149,7 +149,7 @@ async def delete_dataset(
     dataset_id: str, 
     current_user = Depends(get_current_user),
 ):
-    """Delete a dataset and its file."""
+    """Delete a dataset, its file, and its associated conversations."""
     db = firestore.client()
     doc_ref = db.collection('users').document(current_user.uid).collection('datasets').document(dataset_id)
     doc = doc_ref.get()
@@ -169,5 +169,24 @@ async def delete_dataset(
         except Exception as e:
             logger.warning(f"Could not delete file from storage: {e}")
 
+    # Delete all associated conversations and their messages
+    convs_ref = db.collection('users').document(current_user.uid).collection('conversations')
+    convs = convs_ref.where('dataset_id', '==', dataset_id).stream()
+    
+    for conv in convs:
+        # Delete messages subcollection
+        messages = conv.reference.collection('messages').stream()
+        for msg in messages:
+            msg.reference.delete()
+        # Delete conversation document
+        conv.reference.delete()
+
+    # Delete dataset document
     doc_ref.delete()
-    return {"message": "Dataset deleted successfully"}
+    
+    # Remove from in-memory cache
+    from services.data_service import _dataframe_store
+    if dataset_id in _dataframe_store:
+        del _dataframe_store[dataset_id]
+        
+    return {"message": "Dataset and all associated data deleted successfully"}
