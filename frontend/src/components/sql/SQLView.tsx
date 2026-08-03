@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Database, Play, Loader2, AlertCircle, Clock, Rows } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
@@ -36,6 +36,14 @@ export default function SQLView() {
     },
     onError: (err: Error) => toast.error(`Error: ${err.message}`),
   });
+
+  
+  useEffect(() => {
+    sqlMutation.reset();
+    nlMutation.reset();
+    setQuery("SELECT * FROM data LIMIT 10");
+    setNlQuestion("");
+  }, [activeDataset?.id]);
 
   if (!activeDataset) {
     return (

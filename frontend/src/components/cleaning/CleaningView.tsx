@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Wand2, CheckCircle2, Loader2 } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
@@ -40,6 +40,12 @@ export default function CleaningView() {
   const [selectedOp, setSelectedOp] = useState(OPERATIONS[0]);
   const [params, setParams] = useState<Record<string, string>>({ strategy: "mean", method: "minmax" });
   const [history, setHistory] = useState<string[]>([]);
+  
+  useEffect(() => {
+    setHistory([]);
+    setSelectedOp(OPERATIONS[0]);
+    setParams({ strategy: "mean", method: "minmax" });
+  }, [activeDataset?.id]);
 
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);

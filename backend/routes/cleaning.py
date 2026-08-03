@@ -10,7 +10,7 @@ router = APIRouter()
 
 
 @router.post("/", response_model=CleaningResponse)
-async def clean_data(request: CleaningRequest):
+async def clean_data(request: CleaningRequest, current_user = Depends(get_current_user)):
     """Apply a cleaning operation to the dataset."""
     df = get_dataframe(request.dataset_id, current_user.uid)
     if df is None:
