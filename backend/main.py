@@ -3,18 +3,40 @@ Data Analyst Copilot — FastAPI Backend
 Main application entrypoint
 """
 import os
+import asyncio
 import logging
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
 from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 
 from routes import upload, profile, eda, chat, statistics, cleaning, export, sql_agent, suggestions, users
+
+# Keep-alive: prevents Render free tier from spinning down after inactivity
+RENDER_URL = os.getenv("RENDER_EXTERNAL_URL")  # Auto-set by Render in production
+KEEPALIVE_INTERVAL_SECONDS = 10 * 60  # ping every 10 minutes
+
+async def _keep_alive():
+    """Periodically ping own health endpoint to prevent Render spin-down."""
+    if not RENDER_URL:
+        return  # Only runs in production (Render sets this env var automatically)
+    url = f"{RENDER_URL}/api/health"
+    logger_ka = logging.getLogger("keep_alive")
+    logger_ka.info(f"Keep-alive task started — pinging {url} every {KEEPALIVE_INTERVAL_SECONDS // 60} min")
+    async with httpx.AsyncClient(timeout=10) as client:
+        while True:
+            await asyncio.sleep(KEEPALIVE_INTERVAL_SECONDS)
+            try:
+                resp = await client.get(url)
+                logger_ka.debug(f"Keep-alive ping → {resp.status_code}")
+            except Exception as e:
+                logger_ka.warning(f"Keep-alive ping failed: {e}")
 
 # Configure logging
 logging.basicConfig(
@@ -37,7 +59,12 @@ async def lifespan(app: FastAPI):
     # Firestore and Storage are initialized globally via auth_service.py
     logger.info("✅ Firebase services ready")
 
+    # Start keep-alive background task (no-op locally, active on Render)
+    keepalive_task = asyncio.create_task(_keep_alive())
+
     yield
+
+    keepalive_task.cancel()
     logger.info("🛑 Shutting down...")
 
 
@@ -77,8 +104,17 @@ app.include_router(users.router, prefix="/api/users", tags=["Users"])
 
 
 @app.get("/api/health", tags=["Health"])
+@app.head("/api/health", tags=["Health"])
 async def health_check():
-    return {"status": "healthy", "version": "1.0.0", "service": "Data Analyst Copilot"}
+    from services.data_service import get_store_memory_mb
+    memory_info = {"dataframe_store_mb": round(get_store_memory_mb(), 1)}
+    try:
+        import psutil, os as _os
+        proc = psutil.Process(_os.getpid())
+        memory_info["process_rss_mb"] = round(proc.memory_info().rss / 1024 / 1024, 1)
+    except Exception:
+        pass
+    return {"status": "healthy", "version": "1.0.0", "service": "Data Analyst Copilot", **memory_info}
 
 
 @app.exception_handler(Exception)

@@ -1,11 +1,13 @@
 """
 Data Service — manages in-memory pandas DataFrames across requests.
-Uses a session store keyed by dataset_id.
+Uses a session store keyed by dataset_id with LRU eviction to prevent OOM.
 """
+import gc
 import os
 import uuid
 import logging
 import tempfile
+from collections import OrderedDict
 from typing import Optional
 import pandas as pd
 import numpy as np
@@ -13,8 +15,56 @@ from firebase_admin import firestore, storage
 
 logger = logging.getLogger(__name__)
 
-# In-memory store: dataset_id -> DataFrame
-_dataframe_store: dict[str, pd.DataFrame] = {}
+# ---------------------------------------------------------------------------
+# LRU DataFrame Store — evicts the oldest entry when limit is exceeded.
+# Render free tier has 512MB RAM; each DataFrame can be 100–400MB, so
+# keeping more than 3 simultaneous datasets risks OOM crashes.
+# ---------------------------------------------------------------------------
+MAX_CACHED_DATASETS = 3
+MAX_ROWS = 500_000  # datasets larger than this are sampled down
+
+_dataframe_store: OrderedDict[str, pd.DataFrame] = OrderedDict()
+
+
+def _store_put(dataset_id: str, df: pd.DataFrame) -> None:
+    """Insert/update a DataFrame in the LRU store, evicting the oldest if over limit."""
+    if dataset_id in _dataframe_store:
+        _dataframe_store.move_to_end(dataset_id)
+    _dataframe_store[dataset_id] = df
+    while len(_dataframe_store) > MAX_CACHED_DATASETS:
+        evicted_id, evicted_df = _dataframe_store.popitem(last=False)
+        del evicted_df
+        gc.collect()
+        logger.info(f"LRU evicted dataset {evicted_id} from memory store (limit={MAX_CACHED_DATASETS})")
+
+
+def _store_get(dataset_id: str) -> Optional[pd.DataFrame]:
+    """Retrieve a DataFrame and mark it as most-recently-used."""
+    if dataset_id in _dataframe_store:
+        _dataframe_store.move_to_end(dataset_id)
+        return _dataframe_store[dataset_id]
+    return None
+
+
+def get_store_memory_mb() -> float:
+    """Return total RAM used by all cached DataFrames (for health endpoint)."""
+    try:
+        return sum(
+            df.memory_usage(deep=True).sum()
+            for df in _dataframe_store.values()
+        ) / 1024 / 1024
+    except Exception:
+        return 0.0
+
+
+def _apply_row_cap(df: pd.DataFrame, dataset_id: str) -> pd.DataFrame:
+    """If df has more than MAX_ROWS, sample it down with a warning."""
+    if len(df) > MAX_ROWS:
+        logger.warning(
+            f"Dataset {dataset_id} has {len(df):,} rows — sampling down to {MAX_ROWS:,} to stay within memory limits."
+        )
+        df = df.sample(n=MAX_ROWS, random_state=42).reset_index(drop=True)
+    return df
 
 
 def load_dataset(file_path: str, original_filename: str, dataset_id: str = None, user_id: str = None) -> tuple[str, pd.DataFrame]:
@@ -47,16 +97,24 @@ def load_dataset(file_path: str, original_filename: str, dataset_id: str = None,
 
     if not dataset_id:
         dataset_id = str(uuid.uuid4())
-    
-    _dataframe_store[dataset_id] = df
-    logger.info(f"Loaded dataset {dataset_id}: {len(df)} rows × {len(df.columns)} cols")
+
+    # Apply row cap before storing to prevent large uploads from blowing memory
+    df = _apply_row_cap(df, dataset_id)
+
+    _store_put(dataset_id, df)
+    mem_mb = df.memory_usage(deep=True).sum() / 1024 / 1024
+    logger.info(
+        f"Loaded dataset {dataset_id}: {len(df):,} rows × {len(df.columns)} cols "
+        f"({mem_mb:.1f} MB in-process). Store total: {get_store_memory_mb():.1f} MB"
+    )
     return dataset_id, df
 
 
 def get_dataframe(dataset_id: str, user_id: str) -> Optional[pd.DataFrame]:
     """Get a DataFrame by dataset_id. Verifies user ownership. Tries Firebase Storage download if not in memory."""
-    if dataset_id in _dataframe_store:
-        return _dataframe_store[dataset_id]
+    cached = _store_get(dataset_id)
+    if cached is not None:
+        return cached
 
     db = firestore.client()
     doc_ref = db.collection('users').document(user_id).collection('datasets').document(dataset_id)
@@ -91,7 +149,7 @@ def get_dataframe(dataset_id: str, user_id: str) -> Optional[pd.DataFrame]:
 
 def update_dataframe(dataset_id: str, df: pd.DataFrame, user_id: str):
     """Replace the DataFrame for a dataset (after cleaning ops). Updates Firestore."""
-    _dataframe_store[dataset_id] = df
+    _store_put(dataset_id, df)
     db = firestore.client()
     doc_ref = db.collection('users').document(user_id).collection('datasets').document(dataset_id)
     if doc_ref.get().exists:

@@ -3,6 +3,7 @@ Safe Python Executor — sandboxed exec for AI-generated Pandas/visualization co
 Blocks dangerous builtins and only allows approved libraries.
 """
 import io
+import gc
 import sys
 import time
 import base64
@@ -157,12 +158,20 @@ def execute_code(
         with contextlib.redirect_stdout(stdout_capture):
             exec(compile(code, "<ai_generated>", "exec"), exec_globals)
 
+        # Free the DataFrame copy immediately — it can be 100-400MB
+        exec_df = exec_globals.pop("df", None)
+        del exec_df
+        gc.collect()
+
         # Check if a chart was generated
-        if plt.get_fignums():
-            buf = io.BytesIO()
-            plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="#ffffff")
-            buf.seek(0)
-            chart_base64 = base64.b64encode(buf.read()).decode("utf-8")
+        chart_base64 = None
+        try:
+            if plt.get_fignums():
+                buf = io.BytesIO()
+                plt.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor="#ffffff")
+                buf.seek(0)
+                chart_base64 = base64.b64encode(buf.read()).decode("utf-8")
+        finally:
             plt.close("all")
 
         result = exec_globals.get("result")

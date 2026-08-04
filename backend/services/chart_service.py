@@ -2,6 +2,7 @@
 Chart Service — generates EDA and statistical charts using matplotlib/seaborn/plotly.
 Returns base64-encoded PNG images for the frontend.
 """
+import gc
 import io
 import base64
 import logging
@@ -17,6 +18,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import seaborn as sns
+
+# Clear any figures leaked from a previous request on import
+plt.close("all")
 
 # Light theme palette
 BG_COLOR = "#ffffff"
@@ -48,13 +52,17 @@ def _apply_theme(fig, ax=None):
 
 
 def _fig_to_base64(fig) -> str:
-    """Convert matplotlib figure to base64 string."""
-    buf = io.BytesIO()
-    fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=BG_COLOR)
-    buf.seek(0)
-    result = base64.b64encode(buf.read()).decode("utf-8")
-    plt.close(fig)
-    return result
+    """Convert matplotlib figure to base64 string. Always closes the figure."""
+    try:
+        buf = io.BytesIO()
+        fig.savefig(buf, format="png", dpi=150, bbox_inches="tight", facecolor=BG_COLOR)
+        buf.seek(0)
+        result = base64.b64encode(buf.read()).decode("utf-8")
+        return result
+    finally:
+        plt.close(fig)
+        plt.close("all")  # belt-and-suspenders: close any leaked figures
+        gc.collect()
 
 
 def generate_histogram(df: pd.DataFrame, column: str) -> str:
@@ -118,14 +126,20 @@ def generate_boxplot(df: pd.DataFrame, column: str) -> str:
 
 
 def generate_correlation_heatmap(df: pd.DataFrame) -> str:
-    """Correlation heatmap for numeric columns."""
+    """Correlation heatmap for numeric columns. Capped at 20 columns to limit figure size."""
     numeric_df = df.select_dtypes(include=[np.number])
     if len(numeric_df.columns) < 2:
         return None
 
+    # Cap columns to avoid massive figures (each extra column = more RAM at 150dpi)
+    MAX_HEATMAP_COLS = 20
+    if len(numeric_df.columns) > MAX_HEATMAP_COLS:
+        logger.warning(f"Correlation heatmap: truncating from {len(numeric_df.columns)} to {MAX_HEATMAP_COLS} columns")
+        numeric_df = numeric_df.iloc[:, :MAX_HEATMAP_COLS]
+
     corr = numeric_df.corr()
     n = len(corr.columns)
-    fig_size = max(8, min(16, n * 0.9))
+    fig_size = max(8, min(14, n * 0.9))  # hard cap at 14in wide
     fig, ax = plt.subplots(figsize=(fig_size, fig_size * 0.8))
     _apply_theme(fig, ax)
 
@@ -214,13 +228,14 @@ def generate_scatter_plot(df: pd.DataFrame, x_col: str, y_col: str, hue_col: Opt
 
 
 def generate_pairplot(df: pd.DataFrame, columns: Optional[list] = None) -> str:
-    """Pairplot for numeric columns."""
+    """Pairplot for numeric columns. Capped at 4 columns to limit figure size."""
     numeric_df = df.select_dtypes(include=[np.number])
     if columns:
         numeric_df = numeric_df[[c for c in columns if c in numeric_df.columns]]
 
-    # Limit to 5 columns for readability
-    numeric_df = numeric_df.iloc[:, :5].dropna()
+    # Cap at 4 columns (5×5 pairplot at 150dpi is very expensive)
+    MAX_PAIR_COLS = 4
+    numeric_df = numeric_df.iloc[:, :MAX_PAIR_COLS].dropna()
 
     if len(numeric_df.columns) < 2:
         return None

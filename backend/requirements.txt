@@ -42,3 +42,4 @@ pillow
 httpx
 tenacity
 firebase-admin
+psutil
