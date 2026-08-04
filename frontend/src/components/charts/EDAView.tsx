@@ -183,7 +183,7 @@ export default function EDAView() {
   return (
     <div className="h-full overflow-auto">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b sticky top-0 z-10"
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 justify-between px-4 py-3 border-b sticky top-0 z-10"
         style={{ borderColor: "var(--border)", background: "var(--bg-primary)" }}>
         <div className="flex items-center gap-2">
           <BarChart3 className="w-4 h-4" style={{ color: "var(--accent)" }} />
@@ -195,7 +195,7 @@ export default function EDAView() {
           )}
         </div>
         {!isLoading && (
-          <button onClick={handleRefresh} disabled={isRefreshing} className="btn-ghost text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-50">
+          <button onClick={handleRefresh} disabled={isRefreshing} className="btn-ghost text-xs px-3 py-1.5 flex items-center gap-1 disabled:opacity-50 self-start sm:self-auto">
             {isRefreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Refresh Insights"}
           </button>
         )}
@@ -248,12 +248,12 @@ export default function EDAView() {
           )}
 
           {/* Chart type filter */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none flex-nowrap sm:flex-wrap">
             {filters.map((f) => (
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`badge text-xs cursor-pointer transition-all ${filter === f ? "badge-blue" : ""}`}
+                className={`badge text-xs cursor-pointer transition-all flex-shrink-0 ${filter === f ? "badge-blue" : ""}`}
                 style={filter !== f ? {
                   background: "var(--bg-card)",
                   color: "var(--text-secondary)",

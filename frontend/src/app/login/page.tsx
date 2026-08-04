@@ -52,7 +52,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: "var(--bg-primary)" }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-8" style={{ background: "var(--bg-primary)" }}>
       {/* Background decoration */}
       <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-blue-600/20 blur-[120px]" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-cyan-600/20 blur-[120px]" />
@@ -61,11 +61,11 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md p-8 glass-card rounded-2xl shadow-2xl relative z-10"
+        className="w-full max-w-md p-6 sm:p-8 glass-card rounded-2xl shadow-2xl relative z-10"
       >
         <div className="text-center mb-8">
-          <img src="/icon.svg" alt="Logo" className="w-24 h-24 object-contain mx-auto mb-4" />
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[var(--text-primary)] to-[var(--text-secondary)]">
+          <img src="/icon.svg" alt="Logo" className="w-16 h-16 sm:w-24 sm:h-24 object-contain mx-auto mb-3 sm:mb-4" />
+          <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-[var(--text-primary)] to-[var(--text-secondary)]">
             Welcome Back
           </h1>
           <p className="text-sm mt-2" style={{ color: "var(--text-secondary)" }}>

@@ -58,14 +58,14 @@ export default function SQLView() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b flex-shrink-0"
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-0 justify-between px-4 py-3 border-b flex-shrink-0"
         style={{ borderColor: "var(--border)" }}>
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4" style={{ color: "var(--accent)" }} />
           <span className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>SQL Agent</span>
           <span className="badge badge-green text-xs">DuckDB</span>
         </div>
-        <div className="tab-bar text-xs">
+        <div className="tab-bar text-xs self-start sm:self-auto">
           <button
             onClick={() => setActiveMode("sql")}
             className={`tab-item py-1 px-3 ${activeMode === "sql" ? "active" : ""}`}>
@@ -86,7 +86,7 @@ export default function SQLView() {
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
               Describe what you want in plain English and AI will convert it to SQL.
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <input
                 value={nlQuestion}
                 onChange={(e) => setNlQuestion(e.target.value)}
@@ -97,7 +97,7 @@ export default function SQLView() {
               <button
                 onClick={() => nlQuestion && nlMutation.mutate(nlQuestion)}
                 disabled={!nlQuestion || nlMutation.isPending}
-                className="btn-primary flex items-center gap-2 flex-shrink-0">
+                className="btn-primary flex items-center gap-2 justify-center flex-shrink-0">
                 {nlMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                 Convert
               </button>
@@ -165,7 +165,7 @@ export default function SQLView() {
         {result && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             {/* Result header */}
-            <div className="flex items-center gap-4 mb-3 text-sm">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3 text-sm">
               <div className="flex items-center gap-1.5">
                 <Rows className="w-4 h-4" style={{ color: "var(--accent)" }} />
                 <span style={{ color: "var(--text-primary)" }}>{result.rows.toLocaleString()} rows</span>
@@ -174,7 +174,7 @@ export default function SQLView() {
                 <Database className="w-4 h-4" style={{ color: "var(--accent2)" }} />
                 <span style={{ color: "var(--text-primary)" }}>{result.columns.length} columns</span>
               </div>
-              <div className="flex items-center gap-1.5 ml-auto">
+              <div className="flex items-center gap-1.5 sm:ml-auto">
                 <Clock className="w-3.5 h-3.5" style={{ color: "var(--text-muted)" }} />
                 <span className="text-xs" style={{ color: "var(--text-muted)" }}>{result.execution_time_ms}ms</span>
               </div>

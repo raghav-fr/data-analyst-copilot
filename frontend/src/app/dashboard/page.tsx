@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Brain, Upload, MessageSquare, BarChart3, Database, Wand2,
@@ -36,9 +36,16 @@ const TABS: { id: TabId; label: string; icon: React.ComponentType<{ className?: 
   { id: "export", label: "Export", icon: Download },
 ];
 
-function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
+function SidebarContent({
+  sidebarCollapsed,
+  setSidebarCollapsed,
+  onClose,
+  isMobile,
+}: {
   sidebarCollapsed: boolean;
   setSidebarCollapsed: (v: boolean) => void;
+  onClose?: () => void;
+  isMobile?: boolean;
 }) {
   const { user, authLoading, activeDataset, setActiveDataset, setActiveConversationId, setSettingsOpen } = useAppStore();
   const router = useRouter();
@@ -66,20 +73,15 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
     }
   });
 
+  // On mobile the sidebar is always "expanded" (full width drawer)
+  const isCollapsed = isMobile ? false : sidebarCollapsed;
+
   return (
-    <motion.aside
-      animate={{ width: sidebarCollapsed ? 72 : 240 }}
-      transition={{ duration: 0.25, ease: "easeInOut" }}
-      className="flex-shrink-0 flex flex-col border-r overflow-visible shadow-lg z-40 relative"
-      style={{
-        background: "var(--bg-secondary)",
-        borderColor: "var(--border)",
-        height: "100vh",
-      }}>
+    <div className="flex flex-col h-full">
       {/* Logo */}
       <div className="flex items-center justify-between px-3 py-4 border-b"
         style={{ borderColor: "var(--border-subtle)", minHeight: "60px" }}>
-        {sidebarCollapsed ? (
+        {isCollapsed ? (
           <button
             onClick={() => setSidebarCollapsed(false)}
             className="btn-ghost p-1 mx-auto flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full"
@@ -100,28 +102,35 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
                 <p className="text-xs" style={{ color: "var(--accent)" }}>Copilot</p>
               </div>
             </motion.div>
-            <button
-              onClick={() => setSidebarCollapsed(true)}
-              className="btn-ghost p-1 ml-auto flex-shrink-0">
-              <ChevronLeft className="w-4 h-4 flex-shrink-0" />
-            </button>
+            {/* On mobile show X close, on desktop show collapse arrow */}
+            {isMobile ? (
+              <button onClick={onClose} className="btn-ghost p-1 ml-auto flex-shrink-0">
+                <X className="w-4 h-4 flex-shrink-0" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setSidebarCollapsed(true)}
+                className="btn-ghost p-1 ml-auto flex-shrink-0">
+                <ChevronLeft className="w-4 h-4 flex-shrink-0" />
+              </button>
+            )}
           </>
         )}
       </div>
 
       {/* Upload section */}
       <div className="p-3 border-b" style={{ borderColor: "var(--border-subtle)" }}>
-        {!sidebarCollapsed ? (
+        {!isCollapsed ? (
           <div>
             {!activeDataset ? (
               <>
                 <p className="text-xs font-medium mb-2" style={{ color: "var(--text-muted)" }}>
                   DATASET
                 </p>
-                <FileUpload onUploadSuccess={() => { refetch(); }} />
+                <FileUpload onUploadSuccess={() => { refetch(); onClose?.(); }} />
               </>
             ) : (
-              <button 
+              <button
                 onClick={() => { setActiveDataset(null); setActiveConversationId(null); }}
                 className="w-full py-2 px-3 rounded-lg border border-dashed flex items-center justify-center gap-2 text-xs font-medium transition-colors hover:bg-[var(--bg-hover)]"
                 style={{ borderColor: "var(--border)", color: "var(--text-secondary)" }}
@@ -142,7 +151,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
       </div>
 
       {/* Active dataset info */}
-      {activeDataset && !sidebarCollapsed && (
+      {activeDataset && !isCollapsed && (
         <motion.div
           initial={{ opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
@@ -171,17 +180,17 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
         </motion.div>
       )}
 
-      {/* Spacer / Saved Datasets */}
+      {/* Saved Datasets */}
       <div className="flex-1 overflow-y-auto px-3 py-2 custom-scrollbar">
-        {!sidebarCollapsed && datasets && datasets.length > 0 && (
+        {!isCollapsed && datasets && datasets.length > 0 && (
           <div className="flex flex-col gap-2 pb-4">
             <h4 className="text-xs font-semibold mb-1 mt-2" style={{ color: "var(--text-muted)" }}>SAVED DATASETS</h4>
             {datasets.map((ds) => (
-              <div 
-                key={ds.id} 
+              <div
+                key={ds.id}
                 className={`flex items-center justify-between p-2.5 rounded-lg border transition-colors ${activeDataset?.id === ds.id ? "bg-[var(--bg-hover)] border-[var(--accent)]" : "border-[var(--border)] hover:border-[var(--border-hover)]"}`}
               >
-                <div 
+                <div
                   className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer"
                   onClick={() => {
                     if (activeDataset?.id !== ds.id) {
@@ -194,6 +203,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
                         column_names: [],
                       });
                     }
+                    onClose?.();
                   }}
                 >
                   <FileText className="w-4 h-4 flex-shrink-0" style={{ color: "var(--accent)" }} />
@@ -203,7 +213,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
                     </p>
                   </div>
                 </div>
-                <button 
+                <button
                   onClick={() => deleteMutation.mutate(ds.id)}
                   disabled={deleteMutation.isPending}
                   className="btn-ghost p-1.5 flex-shrink-0 hover:bg-red-500/10 hover:text-red-500"
@@ -222,7 +232,7 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
       </div>
 
       {/* Model indicator */}
-      {!sidebarCollapsed && (
+      {!isCollapsed && (
         <div className="px-3 pb-2">
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg"
             style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
@@ -236,81 +246,152 @@ function Sidebar({ sidebarCollapsed, setSidebarCollapsed }: {
       )}
 
       {/* Settings & Home & Logout */}
-      <div className={`p-3 border-t flex gap-2 ${sidebarCollapsed ? "flex-col items-center" : "flex-row"}`} style={{ borderColor: "var(--border)" }}>
+      <div className={`p-3 border-t flex gap-2 safe-bottom ${isCollapsed ? "flex-col items-center" : "flex-row"}`} style={{ borderColor: "var(--border)" }}>
         <button
           onClick={() => router.push("/")}
-          className={`btn-ghost p-2 flex items-center justify-center ${sidebarCollapsed ? "w-12 h-12 rounded-xl" : ""}`}
-          style={sidebarCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
+          className={`btn-ghost p-2 flex items-center justify-center ${isCollapsed ? "w-12 h-12 rounded-xl" : ""}`}
+          style={isCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
           title="Home">
           <Home className="w-4 h-4 flex-shrink-0" />
         </button>
         <button
-          onClick={() => setSettingsOpen(true)}
-          className={`btn-ghost p-2 flex items-center justify-center ${sidebarCollapsed ? "w-12 h-12 rounded-xl" : "flex-1"}`}
-          style={sidebarCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
+          onClick={() => { setSettingsOpen(true); onClose?.(); }}
+          className={`btn-ghost p-2 flex items-center justify-center ${isCollapsed ? "w-12 h-12 rounded-xl" : "flex-1"}`}
+          style={isCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
           title="Settings">
           <Settings className="w-4 h-4 flex-shrink-0" />
-          {!sidebarCollapsed && <span className="ml-2 text-xs">Settings</span>}
+          {!isCollapsed && <span className="ml-2 text-xs">Settings</span>}
         </button>
         <button
           onClick={async () => {
             await signOut(auth);
             router.push("/login");
           }}
-          className={`btn-ghost p-2 flex items-center justify-center ${sidebarCollapsed ? "w-12 h-12 rounded-xl text-red-400" : "text-red-400 hover:bg-red-500/10"}`}
-          style={sidebarCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
+          className={`btn-ghost p-2 flex items-center justify-center ${isCollapsed ? "w-12 h-12 rounded-xl text-red-400" : "text-red-400 hover:bg-red-500/10"}`}
+          style={isCollapsed ? { background: "var(--bg-card)", border: "1px solid var(--border)" } : {}}
           title="Log out">
           <LogOut className="w-4 h-4 flex-shrink-0" />
         </button>
       </div>
-    </motion.aside>
+    </div>
   );
 }
 
 export default function DashboardPage() {
   const { activeTab, setActiveTab, activeDataset, settingsOpen } = useAppStore();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const currentTab = (activeTab as TabId) || "chat";
 
-  const renderContent = () => {
-    switch (currentTab) {
-      case "chat": return <ChatInterface />;
-      case "profile": return <DatasetProfileView />;
-      case "eda": return <EDAView />;
-      case "sql": return <SQLView />;
-      case "cleaning": return <CleaningView />;
-      case "export": return <ExportView />;
-      default: return <ChatInterface />;
-    }
+  // Auto-collapse sidebar on tablet, expand on desktop
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 1024 && window.innerWidth >= 768) {
+        setSidebarCollapsed(true);
+      } else if (window.innerWidth >= 1024) {
+        setSidebarCollapsed(false);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Close mobile menu on route/tab change
+  const handleTabChange = (tabId: TabId) => {
+    setActiveTab(tabId);
+    setMobileMenuOpen(false);
   };
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: "var(--bg-primary)" }}>
-      {/* Sidebar */}
-      <Sidebar sidebarCollapsed={sidebarCollapsed} setSidebarCollapsed={setSidebarCollapsed} />
+
+      {/* ── Desktop Sidebar (md+) ── */}
+      <motion.aside
+        animate={{ width: sidebarCollapsed ? 72 : 240 }}
+        transition={{ duration: 0.25, ease: "easeInOut" }}
+        className="hidden md:flex flex-shrink-0 flex-col border-r overflow-visible shadow-lg z-40 relative"
+        style={{
+          background: "var(--bg-secondary)",
+          borderColor: "var(--border)",
+          height: "100vh",
+        }}>
+        <SidebarContent
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          isMobile={false}
+        />
+      </motion.aside>
+
+      {/* ── Mobile Sidebar Drawer (< md) ── */}
+      <AnimatePresence>
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="sidebar-overlay md:hidden"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            {/* Drawer */}
+            <motion.div
+              key="drawer"
+              initial={{ x: -280 }}
+              animate={{ x: 0 }}
+              exit={{ x: -280 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              className="fixed left-0 top-0 h-full w-[280px] z-50 md:hidden flex flex-col border-r shadow-2xl"
+              style={{
+                background: "var(--bg-secondary)",
+                borderColor: "var(--border)",
+              }}>
+              <SidebarContent
+                sidebarCollapsed={false}
+                setSidebarCollapsed={setSidebarCollapsed}
+                onClose={() => setMobileMenuOpen(false)}
+                isMobile={true}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Top bar */}
-        <div className="flex items-center border-b px-4 py-2 gap-3 flex-shrink-0"
+        <div className="flex items-center border-b px-2 sm:px-4 py-2 gap-2 sm:gap-3 flex-shrink-0"
           style={{ borderColor: "var(--border-subtle)", background: "var(--bg-secondary)", minHeight: "48px" }}>
-          {/* Tab bar */}
-          <div className="flex items-center gap-1 overflow-x-auto flex-1">
+
+          {/* Mobile hamburger */}
+          <button
+            onClick={() => setMobileMenuOpen(true)}
+            className="md:hidden btn-ghost p-2 flex items-center justify-center flex-shrink-0"
+            aria-label="Open menu">
+            <Menu className="w-4 h-4" />
+          </button>
+
+          {/* Tab bar — scrollable, icons-only on small mobile */}
+          <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto flex-1 scrollbar-none">
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = currentTab === tab.id;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0"
+                  onClick={() => handleTabChange(tab.id)}
+                  className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex-shrink-0"
                   style={{
                     background: isActive ? "var(--bg-hover)" : "transparent",
                     color: isActive ? "var(--accent)" : "var(--text-secondary)",
                     border: isActive ? "1px solid var(--border)" : "1px solid transparent",
                   }}>
-                  <Icon className="w-3.5 h-3.5" />
-                  <span>{tab.label}</span>
+                  <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                  {/* Label: hidden on mobile (< sm), visible on sm+ */}
+                  <span className="hidden sm:inline">{tab.label}</span>
                 </button>
               );
             })}
@@ -318,14 +399,14 @@ export default function DashboardPage() {
 
           {/* Dataset pill */}
           {activeDataset && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border flex-shrink-0 text-xs"
+            <div className="flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg border flex-shrink-0 text-xs"
               style={{
                 background: "var(--bg-panel)",
                 borderColor: "var(--border)",
                 color: "var(--accent2)"
               }}>
-              <Sparkles className="w-3 h-3" />
-              <span className="max-w-[120px] truncate">{activeDataset.filename}</span>
+              <Sparkles className="w-3 h-3 flex-shrink-0" />
+              <span className="max-w-[60px] sm:max-w-[120px] truncate">{activeDataset.filename}</span>
             </div>
           )}
         </div>
@@ -344,17 +425,19 @@ export default function DashboardPage() {
               </>
             )}
           </div>
-          
+
           {!activeDataset && currentTab !== "chat" && (
-            <div className="flex flex-col items-center justify-center h-full gap-4">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
+            <div className="flex flex-col items-center justify-center h-full gap-4 px-4">
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl flex items-center justify-center"
                 style={{ background: "var(--bg-hover)", border: "1px solid var(--border)" }}>
-                <Upload className="w-8 h-8" style={{ color: "var(--accent)" }} />
+                <Upload className="w-7 h-7 md:w-8 md:h-8" style={{ color: "var(--accent)" }} />
               </div>
               <div className="text-center">
                 <p className="font-semibold mb-2" style={{ color: "var(--text-primary)" }}>No dataset loaded</p>
                 <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                  Upload a CSV or Excel file from the sidebar to get started
+                  {/* Different hint text for mobile vs desktop */}
+                  <span className="md:hidden">Tap ☰ and upload a dataset to get started</span>
+                  <span className="hidden md:inline">Upload a CSV or Excel file from the sidebar to get started</span>
                 </p>
               </div>
             </div>

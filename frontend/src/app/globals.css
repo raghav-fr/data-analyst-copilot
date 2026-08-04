@@ -526,6 +526,61 @@ body {
   z-index: 40;
 }
 
+/* ─── Mobile Sidebar Overlay ─────────────────────────────────────────────────── */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 39;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* ─── Safe Area Support (iOS notch / home bar) ───────────────────────────────── */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* ─── Responsive Utilities ───────────────────────────────────────────────────── */
+/* Hide scrollbar on tab bars while keeping scrollability */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Clamp font utility used in landing hero */
+.hero-title {
+  font-size: clamp(2rem, 7vw, 4rem);
+  line-height: 1.15;
+}
+
+/* Mobile-friendly touch target minimum */
+@media (max-width: 768px) {
+  .btn-primary, .btn-secondary, .btn-ghost {
+    min-height: 40px;
+  }
+  .tab-item {
+    min-height: 36px;
+    padding: 6px 10px;
+  }
+  /* Reduce prose font size on mobile */
+  .prose-dark {
+    font-size: 13px;
+  }
+  /* Chat bubbles should be wider on mobile */
+  .chat-user, .chat-assistant {
+    max-width: 92%;
+  }
+}
+
 /* ─── Resizable Panel ────────────────────────────────────────────────────────── */
 .panel-divider {
   background: var(--border);
